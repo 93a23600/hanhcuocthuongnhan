@@ -1,97 +1,1062 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <title>YouTube Full Window</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-        #bar {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            display: flex;
-            gap: 8px;
-            background: rgba(25, 25, 25, 0.85);
-            padding: 8px 14px;
-            border-radius: 25px;
-            opacity: 0.25;
-            transition: opacity 0.2s;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trợ Lý Kiểm Kho Game - Auto Inventory Auditor</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            game: {
+              panel: '#151d28',
+              card: '#1e293b',
+              slot: '#0f172a',
+              accent: '#f59e0b',
+            }
+          }
         }
-        #bar:hover, #bar:focus-within { opacity: 1; }
-        #url-input {
-            width: 280px;
-            padding: 6px 12px;
-            border: 1px solid #444;
-            border-radius: 16px;
-            background: #111;
-            color: #fff;
-            outline: none;
-            font-size: 13px;
-        }
-        button {
-            padding: 6px 14px;
-            background: #e60000;
-            color: #fff;
-            border: none;
-            border-radius: 16px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        #player {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .drop-active {
+      border-color: #10b981 !important;
+      background-color: rgba(16, 185, 129, 0.08) !important;
+      transform: scale(1.005);
+    }
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+    .badge-emerald {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-[#0b0f17] text-slate-200 min-h-screen font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white">
 
-    <div id="bar">
-        <input type="text" id="url-input" placeholder="Dan link YouTube vao day...">
-        <button onclick="playVideo()">Xem ngay</button>
+  <!-- Header Bar -->
+  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30 text-white font-black text-xl">
+          <i data-lucide="package-search" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">Kiểm Kho Game AI</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Vision Auditor</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Dán (Ctrl+V) &bull; Tự động cộng dồn số lượng</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <!-- Quick Mock Button -->
+        <button id="btnLoadMock" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition shadow-sm">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>Nạp 4 Rương Mẫu</span>
+        </button>
+
+        <!-- API Config Modal Toggle -->
+        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span id="apiKeyLabel">Cài đặt API</span>
+        </button>
+
+        <!-- Reset All Data -->
+        <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/40 transition">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
     </div>
+  </header>
 
-    <div id="player"></div>
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-        var player = null;
+    <!-- Upload & Paste Zone -->
+    <section class="bg-game-card border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div class="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-        function extractID(url) {
-            var m = url.match(/(?:youtu\.be\/|watch\?v=|embed\/|shorts\/)([\w-]{11})/);
-            return m ? m[1] : null;
+      <div class="flex flex-col md:flex-row gap-5 items-stretch">
+        <!-- Drag & Drop / Paste Box -->
+        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition group focus:outline-none focus:border-emerald-500">
+          <input type="file" id="fileInput" accept="image/*" multiple class="hidden" />
+          <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
+            <i data-lucide="image-plus" class="w-7 h-7"></i>
+          </div>
+          <h3 class="font-semibold text-white text-base">Thả ảnh rương vào đây hoặc <span class="text-emerald-400 underline underline-offset-2">chọn tệp</span></h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-md">
+            Mẹo tiện nhất: Nhấn <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-mono">Ctrl + V</kbd> ở bất kỳ đâu trên trang này để dán ngay ảnh chụp màn hình rương!
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] text-slate-400">
+            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Hỗ trợ PNG, JPG, WebP</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Quét 30 ô cùng lúc</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Có thể dán liên tiếp nhiều rương</span>
+          </div>
+        </div>
+
+        <!-- Mode & Status Box -->
+        <div class="w-full md:w-80 bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-2">
+              <span class="text-slate-400 font-medium">Chế độ phân tích:</span>
+              <span id="modeBadge" class="badge-amber text-xs px-2 py-0.5 rounded-full font-semibold">Chế độ Demo</span>
+            </div>
+            <p id="modeDesc" class="text-xs text-slate-400 leading-relaxed">
+              Bạn chưa thiết lập Gemini API Key. Ảnh tải lên có thể sử dụng dữ liệu giả lập hoặc kết nối API để nhận diện tự động bằng mô hình thị giác.
+            </p>
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex justify-between text-slate-400">
+              <span>Số rương đã nạp:</span>
+              <strong id="statChestsCount" class="text-white">0</strong>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Tổng số loại vật phẩm:</span>
+              <strong id="statUniqueItems" class="text-emerald-400">0</strong>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Tổng lượng vật phẩm:</span>
+              <strong id="statTotalItems" class="text-amber-400 font-bold">0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Tabs & Filters -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <!-- View Tabs -->
+        <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm">
+          <button id="tabSummaryBtn" class="px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>Tổng Hợp Toàn Kho</span>
+          </button>
+          <button id="tabChestsBtn" class="px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white">
+            <i data-lucide="archive" class="w-4 h-4"></i>
+            <span>Chi Tiết Từng Rương (<span id="chestTabCount">0</span>)</span>
+          </button>
+        </div>
+
+        <!-- Search & Export Tools -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="searchInput" placeholder="Tìm vật phẩm..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition">
+          </div>
+
+          <!-- Export Dropdown / Buttons -->
+          <button id="btnExportCSV" title="Xuất CSV" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="hidden sm:inline">Xuất CSV</span>
+          </button>
+          <button id="btnCopyTable" title="Sao chép bảng để dán vào Excel / Google Sheets" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="hidden sm:inline">Sao Chép Bảng</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: SUMMARY DASHBOARD -->
+      <div id="tabSummaryView" class="space-y-4">
+        <div class="bg-game-card border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr class="bg-slate-900/90 border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                  <th class="py-3 px-4 w-12 text-center">#</th>
+                  <th class="py-3 px-4 cursor-pointer hover:text-white transition" id="sortByName">
+                    <div class="flex items-center gap-1.5">Tên Vật Phẩm <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
+                  </th>
+                  <th class="py-3 px-4 text-center">Số Ô Chiếm (Stacks)</th>
+                  <th class="py-3 px-4 text-center">Các Rương Xuất Hiện</th>
+                  <th class="py-3 px-4 text-right cursor-pointer hover:text-white transition" id="sortByQty">
+                    <div class="flex items-center justify-end gap-1.5">Tổng Số Lượng <i data-lucide="arrow-down" class="w-3 h-3 text-emerald-400"></i></div>
+                  </th>
+                  <th class="py-3 px-4 text-center w-28">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-slate-300 text-xs sm:text-sm">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="emptySummaryNotice" class="py-16 text-center text-slate-500 space-y-2">
+            <i data-lucide="box" class="w-12 h-12 mx-auto text-slate-600 mb-2"></i>
+            <p class="text-sm font-medium">Chưa có dữ liệu rương nào.</p>
+            <p class="text-xs text-slate-500">Chụp ảnh màn hình rương trong game và dán (Ctrl+V) hoặc ấn "Nạp 4 Rương Mẫu" để trải nghiệm thử.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: DETAILED CHESTS VIEW -->
+      <div id="tabChestsView" class="hidden space-y-6">
+        <div id="chestsContainer" class="space-y-6">
+          <!-- Dynamic Chest Cards -->
+        </div>
+
+        <div id="emptyChestNotice" class="bg-game-card border border-slate-800 rounded-2xl p-12 text-center text-slate-500 space-y-2">
+          <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-600"></i>
+          <p class="text-sm font-medium">Chưa có rương nào được thêm vào danh sách.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- API Key & Config Modal -->
+  <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
+          <h2 class="text-base font-bold text-white">Cấu hình Gemini Vision API</h2>
+        </div>
+        <button id="btnCloseConfig" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Để nhận diện tự động từ ảnh chụp rương thực tế của bạn bằng AI đa phương thức, vui lòng nhập khóa Google Gemini API. Khóa này chỉ lưu trữ trên trình duyệt của bạn (LocalStorage).
+      </p>
+
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-300">Gemini API Key</label>
+        <div class="relative">
+          <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+          <button id="toggleApiKeyVis" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Nếu để trống, hệ thống sẽ sử dụng <strong>Chế độ Mock Demo</strong> hoặc gợi ý cấu hình.
+        </p>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
+        <button id="btnClearApiKey" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Khóa</button>
+        <button id="btnSaveApiKey" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Lưu Cấu Hình</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Edit Item Modal -->
+  <div id="editItemModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i>
+          <span>Chỉnh sửa ô vật phẩm</span>
+        </h3>
+        <button id="btnCloseEditModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Tên vật phẩm:</label>
+          <input type="text" id="editItemName" list="knownItemsList" class="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+          <datalist id="knownItemsList"></datalist>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Số lượng:</label>
+          <input type="number" id="editItemQty" min="1" max="999999" class="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button id="btnDeleteSlot" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Ô Này</button>
+        <button id="btnSaveSlot" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Cập Nhật</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    /* Predefined Game Known Items (Từ bộ rương võ hiệp của game) */
+    const KNOWN_ITEMS = [
+      "Võ sĩ yêu đái", "Quỷ Hồn", "Linh Tán", "Thiết bát quái", "Linh Cầm",
+      "Cánh dơi", "Vòng Bạch Ngọc", "Canh Mộc Bài", "Mặt nạ Võ sĩ", "Bùa vàng",
+      "Linh Tiêu", "Võ sĩ đao", "Lệnh bài sư môn Ngũ Độc", "Bạch Ngưu Lân",
+      "Toái cốt", "Da hổ", "Huyết Nha vũ", "Thuốc nổ", "Linh Địch", "Tàn thương",
+      "Đại Cang đao", "Phù ấn", "Linh Quả", "Giáp xác phiến", "Găng tay",
+      "Bí kíp / Sách vàng", "Tê Ngưu Cung"
+    ];
+
+    /* 4 Predefined Realistic Chests matching user's inventory */
+    const MOCK_CHESTS_DATA = [
+      {
+        id: "chest-1",
+        title: "Rương 1",
+        createdAt: "2026-09-20 20:45",
+        slots: [
+          { name: "Bùa vàng", qty: 999 },
+          { name: "Lệnh bài sư môn Ngũ Độc", qty: 175 },
+          { name: "Cánh dơi", qty: 999 },
+          { name: "Cánh dơi", qty: 999 },
+          { name: "Canh Mộc Bài", qty: 999 },
+          { name: "Canh Mộc Bài", qty: 667 },
+          { name: "Thiết bát quái", qty: 999 },
+          { name: "Thiết bát quái", qty: 999 },
+          { name: "Thiết bát quái", qty: 340 },
+          { name: "Quỷ Hồn", qty: 999 },
+          { name: "Quỷ Hồn", qty: 999 },
+          { name: "Quỷ Hồn", qty: 999 },
+          { name: "Quỷ Hồn", qty: 999 },
+          { name: "Vòng Bạch Ngọc", qty: 999 },
+          { name: "Vòng Bạch Ngọc", qty: 737 },
+          { name: "Bạch Ngưu Lân", qty: 116 },
+          { name: "Võ sĩ đao", qty: 553 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 508 },
+          { name: "Mặt nạ Võ sĩ", qty: 999 },
+          { name: "Linh Tiêu", qty: 687 },
+          { name: "Linh Tán", qty: 999 },
+          { name: "Linh Tán", qty: 999 },
+          { name: "Linh Tán", qty: 999 },
+          { name: "Linh Tán", qty: 368 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 216 }
+        ]
+      },
+      {
+        id: "chest-2",
+        title: "Rương 2",
+        createdAt: "2026-09-20 20:50",
+        slots: [
+          { name: "Linh Địch", qty: 999 },
+          { name: "Linh Địch", qty: 999 },
+          { name: "Linh Địch", qty: 999 },
+          { name: "Linh Địch", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 999 },
+          { name: "Huyết Nha vũ", qty: 37 },
+          { name: "Da hổ", qty: 999 },
+          { name: "Da hổ", qty: 999 },
+          { name: "Da hổ", qty: 999 },
+          { name: "Da hổ", qty: 999 },
+          { name: "Da hổ", qty: 999 },
+          { name: "Da hổ", qty: 918 },
+          { name: "Toái cốt", qty: 999 },
+          { name: "Toái cốt", qty: 999 },
+          { name: "Toái cốt", qty: 999 },
+          { name: "Toái cốt", qty: 999 },
+          { name: "Toái cốt", qty: 924 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Đại Cang đao", qty: 999 },
+          { name: "Đại Cang đao", qty: 659 },
+          { name: "Đại Cang đao", qty: 999 },
+          { name: "Thuốc nổ", qty: 999 },
+          { name: "Thuốc nổ", qty: 999 },
+          { name: "Thuốc nổ", qty: 999 },
+          { name: "Thuốc nổ", qty: 999 },
+          { name: "Thuốc nổ", qty: 473 },
+          { name: "Thuốc nổ", qty: 999 },
+          { name: "Tàn thương", qty: 999 },
+          { name: "Tàn thương", qty: 999 },
+          { name: "Tàn thương", qty: 999 },
+          { name: "Toái cốt", qty: 907 }
+        ]
+      },
+      {
+        id: "chest-3",
+        title: "Rương 3",
+        createdAt: "2026-09-20 21:00",
+        slots: [
+          { name: "Canh Mộc Bài", qty: 74 },
+          { name: "Tê Ngưu Cung", qty: 56 },
+          { name: "Võ sĩ đao", qty: 162 },
+          { name: "Võ sĩ đao", qty: 999 },
+          { name: "Võ sĩ đao", qty: 999 },
+          { name: "Võ sĩ đao", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 695 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Võ sĩ yêu đái", qty: 999 },
+          { name: "Giáp xác phiến", qty: 636 },
+          { name: "Linh Tiêu", qty: 999 },
+          { name: "Linh Tiêu", qty: 655 },
+          { name: "Linh Quả", qty: 999 },
+          { name: "Linh Tán", qty: 714 },
+          { name: "Linh Tán", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Linh Cầm", qty: 154 },
+          { name: "Linh Cầm", qty: 999 },
+          { name: "Da hổ", qty: 852 },
+          { name: "Toái cốt", qty: 938 },
+          { name: "Thiết bát quái", qty: 57 },
+          { name: "Đại Cang đao", qty: 999 },
+          { name: "Đại Cang đao", qty: 999 },
+          { name: "Đại Cang đao", qty: 41 },
+          { name: "Thuốc nổ", qty: 23 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Phù ấn", qty: 868 },
+          { name: "Phù ấn", qty: 999 }
+        ]
+      },
+      {
+        id: "chest-4",
+        title: "Rương 4",
+        createdAt: "2026-09-20 21:05",
+        slots: [
+          { name: "Phù ấn", qty: 999 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Găng tay", qty: 286 },
+          { name: "Bí kíp / Sách vàng", qty: 120 },
+          { name: "Toái cốt", qty: 408 },
+          { name: "Phù ấn", qty: 999 },
+          { name: "Phù ấn", qty: 891 }
+        ]
+      }
+    ];
+
+    /* Global State */
+    let appState = {
+      apiKey: localStorage.getItem("gemini_api_key") || "",
+      chests: [],
+      searchQuery: "",
+      sortBy: "qty", // 'name' or 'qty'
+      sortDesc: true,
+      currentTab: "summary", // 'summary' or 'chests'
+      editingSlot: null // { chestId, slotIndex }
+    };
+
+    // Initialize Known Items Datalist for fast autofill
+    const datalist = document.getElementById("knownItemsList");
+    KNOWN_ITEMS.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      datalist.appendChild(opt);
+    });
+
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = `px-4 py-2.5 rounded-xl text-xs font-medium text-white shadow-xl flex items-center gap-2 border transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0 ${
+        type === "success" ? "bg-emerald-950 border-emerald-500 text-emerald-200" :
+        type === "error" ? "bg-red-950 border-red-500 text-red-200" :
+        "bg-slate-900 border-slate-700 text-slate-200"
+      }`;
+      
+      const icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Animate In
+      requestAnimationFrame(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      });
+
+      setTimeout(() => {
+        toast.classList.add("translate-y-2", "opacity-0");
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function updateApiKeyUI() {
+      const modeBadge = document.getElementById("modeBadge");
+      const modeDesc = document.getElementById("modeDesc");
+      const apiKeyLabel = document.getElementById("apiKeyLabel");
+
+      if (appState.apiKey && appState.apiKey.trim().length > 0) {
+        modeBadge.className = "badge-emerald text-xs px-2 py-0.5 rounded-full font-semibold";
+        modeBadge.textContent = "Gemini AI Online";
+        modeDesc.innerHTML = `Đã kết nối Gemini API. Khi dán ảnh (<kbd class="px-1 py-0.5 rounded bg-slate-800 text-[10px]">Ctrl+V</kbd>), hệ thống sẽ trực tiếp gọi mô hình AI để nhận diện từng ô đồ.`;
+        apiKeyLabel.textContent = "API: Sẵn Sàng";
+      } else {
+        modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
+        modeBadge.textContent = "Chế độ Demo";
+        modeDesc.textContent = "Chưa cài API Key. Khi dán hoặc thả ảnh, hệ thống sẽ sử dụng bộ dữ liệu giả lập thông minh (Mock Dataset). Bạn có thể bấm 'Cài đặt API' để kích hoạt AI thực tế.";
+        apiKeyLabel.textContent = "Cài đặt API";
+      }
+    }
+
+    async function analyzeChestWithGemini(base64Image) {
+      // Prompt engineered specifically for the game inventory grid
+      const systemPrompt = `Bạn là trợ lý chuyên bóc tách dữ liệu rương đồ game võ hiệp dạng lưới.
+Hãy nhìn vào ảnh rương đồ và trích xuất danh sách các ô có chứa vật phẩm và số lượng tương ứng.
+Danh mục tên vật phẩm chuẩn của game bao gồm:
+[${KNOWN_ITEMS.join(", ")}].
+
+QUY TẮC QUAN TRỌNG:
+1. Trả về đúng định dạng JSON Array chứa các object { "name": string, "qty": number }.
+2. Không thêm markdown, không thêm chữ giải thích bên ngoài.
+3. Số lượng thường có tiền tố 'x' góc dưới (ví dụ x999, x508, x116). Chỉ lấy số nguyên dương.
+4. Ô nào trống thì bỏ qua.`;
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: "Hãy nhận diện tất cả các ô vật phẩm trong rương đồ này và số lượng tương ứng theo định dạng JSON:" },
+              {
+                inlineData: {
+                  mimeType: "image/png",
+                  data: base64Image
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json"
+        },
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
         }
+      };
 
-        function playVideo() {
-            var val = document.getElementById('url-input').value.trim();
-            var id = extractID(val);
-            if (!id) {
-                alert('Link YouTube khong hop le!');
-                return;
-            }
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${appState.apiKey}`;
 
-            if (player && typeof player.loadVideoById === 'function') {
-                player.loadVideoById(id);
-            } else {
-                player = new YT.Player('player', {
-                    videoId: id,
-                    host: 'https://www.youtube-nocookie.com',
-                    playerVars: {
-                        autoplay: 1,
-                        playsinline: 1,
-                        origin: 'https://www.youtube.com',
-                        enablejsapi: 1
-                    }
-                });
-            }
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Lỗi API (${res.status})`);
+      }
+
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error("AI không thể trích xuất vật phẩm từ ảnh này.");
+
+      const parsed = JSON.parse(rawText);
+      if (!Array.isArray(parsed)) throw new Error("Định dạng dữ liệu trả về từ AI không hợp lệ.");
+      return parsed;
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove prefix "data:image/xxx;base64,"
+          const base64 = reader.result.split(',')[1];
+          resolve({ base64, dataUrl: reader.result });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleIncomingImages(files) {
+      if (!files || files.length === 0) return;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith("image/")) continue;
+
+        const nextIndex = appState.chests.length + 1;
+        const chestId = "chest-" + Date.now() + "-" + i;
+        showToast(`Đang phân tích hình ảnh Rương ${nextIndex}...`, "info");
+
+        try {
+          const { base64, dataUrl } = await fileToBase64(file);
+          let detectedSlots = [];
+
+          if (appState.apiKey && appState.apiKey.trim().length > 0) {
+            // Live AI Analysis
+            detectedSlots = await analyzeChestWithGemini(base64);
+          } else {
+            // Intelligent Mock Fallback
+            await new Promise(r => setTimeout(r, 600)); // Simulate brief network delay
+            const mockIndex = (nextIndex - 1) % MOCK_CHESTS_DATA.length;
+            detectedSlots = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA[mockIndex].slots));
+          }
+
+          // Append new Chest to State
+          appState.chests.push({
+            id: chestId,
+            title: `Rương ${nextIndex}`,
+            imageUrl: dataUrl,
+            createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
+            slots: detectedSlots
+          });
+
+          showToast(`Đã nhận diện thành công Rương ${nextIndex}! (${detectedSlots.length} ô)`, "success");
+          renderAll();
+        } catch (err) {
+          console.error(err);
+          showToast(`Lỗi phân tích ảnh: ${err.message}`, "error");
         }
+      }
+    }
 
-        document.getElementById('url-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') playVideo();
+    /* Setup Paste Listener (Ctrl+V) on window */
+    window.addEventListener("paste", (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      const imageFiles = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        handleIncomingImages(imageFiles);
+      }
+    });
+
+    /* Setup Drag & Drop on DropZone */
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+
+    dropZone.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => {
+      handleIncomingImages(Array.from(e.target.files));
+      fileInput.value = "";
+    });
+
+    ["dragenter", "dragover"].forEach(event => {
+      dropZone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drop-active");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(event => {
+      dropZone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drop-active");
+      });
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      const dt = e.dataTransfer;
+      const files = Array.from(dt.files);
+      handleIncomingImages(files);
+    });
+
+    function calculateInventorySummary() {
+      const summaryMap = new Map();
+
+      appState.chests.forEach((chest) => {
+        chest.slots.forEach(slot => {
+          const name = (slot.name || "Chưa đặt tên").trim();
+          const qty = parseInt(slot.qty) || 0;
+          if (!summaryMap.has(name)) {
+            summaryMap.set(name, {
+              name: name,
+              totalQty: 0,
+              stackCount: 0,
+              foundChests: new Set()
+            });
+          }
+          const itemStat = summaryMap.get(name);
+          itemStat.totalQty += qty;
+          itemStat.stackCount += 1;
+          itemStat.foundChests.add(chest.title);
         });
-    </script>
+      });
+
+      let results = Array.from(summaryMap.values());
+
+      // Filter by Search Query
+      if (appState.searchQuery) {
+        const query = appState.searchQuery.toLowerCase();
+        results = results.filter(i => i.name.toLowerCase().includes(query));
+      }
+
+      // Sort
+      results.sort((a, b) => {
+        if (appState.sortBy === "name") {
+          return appState.sortDesc ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
+        } else {
+          return appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty;
+        }
+      });
+
+      return results;
+    }
+
+    function renderAll() {
+      const summaryData = calculateInventorySummary();
+      const summaryTableBody = document.getElementById("summaryTableBody");
+      const emptySummaryNotice = document.getElementById("emptySummaryNotice");
+
+      // Global Stats Top Bar
+      let grandTotalQty = 0;
+      appState.chests.forEach(c => c.slots.forEach(s => grandTotalQty += (parseInt(s.qty) || 0)));
+      document.getElementById("statChestsCount").textContent = appState.chests.length;
+      document.getElementById("statUniqueItems").textContent = summaryData.length;
+      document.getElementById("statTotalItems").textContent = grandTotalQty.toLocaleString('vi-VN');
+      document.getElementById("chestTabCount").textContent = appState.chests.length;
+
+      // Render Summary Table Rows
+      summaryTableBody.innerHTML = "";
+      if (summaryData.length === 0) {
+        emptySummaryNotice.classList.remove("hidden");
+      } else {
+        emptySummaryNotice.classList.add("hidden");
+        summaryData.forEach((item, index) => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-slate-800/40 transition group border-b border-slate-800/60";
+
+          const chestPills = Array.from(item.foundChests).map(c => 
+            `<span class="inline-block px-2 py-0.5 text-[11px] rounded-md bg-slate-800 border border-slate-700/60 text-slate-300 mr-1">${c}</span>`
+          ).join("");
+
+          tr.innerHTML = `
+            <td class="py-3 px-4 text-center font-mono text-slate-500">${index + 1}</td>
+            <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>${item.name}</span>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <span class="font-mono bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">${item.stackCount} ô</span>
+            </td>
+            <td class="py-3 px-4 text-center">${chestPills}</td>
+            <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm sm:text-base">
+              ${item.totalQty.toLocaleString('vi-VN')}
+            </td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="copySingleItemSummary('${item.name}', ${item.totalQty})" title="Sao chép tên & số lượng" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          `;
+          summaryTableBody.appendChild(tr);
+        });
+      }
+
+      // Render Detailed Chests
+      const chestsContainer = document.getElementById("chestsContainer");
+      const emptyChestNotice = document.getElementById("emptyChestNotice");
+      chestsContainer.innerHTML = "";
+
+      if (appState.chests.length === 0) {
+        emptyChestNotice.classList.remove("hidden");
+      } else {
+        emptyChestNotice.classList.add("hidden");
+        appState.chests.forEach((chest, chestIdx) => {
+          const chestCard = document.createElement("div");
+          chestCard.className = "bg-game-card border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4";
+          
+          let chestTotalQty = 0;
+          chest.slots.forEach(s => chestTotalQty += (parseInt(s.qty) || 0));
+
+          const slotsHtml = chest.slots.map((slot, slotIdx) => `
+            <div onclick="openEditSlotModal('${chest.id}', ${slotIdx})" class="group cursor-pointer bg-game-slot border border-slate-800 hover:border-emerald-500/80 rounded-xl p-2.5 flex flex-col justify-between transition relative hover:scale-105">
+              <div class="text-[11px] font-medium text-slate-300 truncate" title="${slot.name}">
+                ${slot.name}
+              </div>
+              <div class="mt-2 flex items-center justify-between">
+                <span class="text-[10px] text-slate-500">Ô ${slotIdx + 1}</span>
+                <span class="text-xs font-mono font-bold text-amber-400">x${slot.qty}</span>
+              </div>
+            </div>
+          `).join("");
+
+          chestCard.innerHTML = `
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                  ${chestIdx + 1}
+                </div>
+                <div>
+                  <h3 class="font-bold text-white text-base">${chest.title}</h3>
+                  <p class="text-xs text-slate-400">Thời gian: ${chest.createdAt} &bull; ${chest.slots.length} ô có đồ</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <span class="text-xs text-slate-400">Tổng: <strong class="text-amber-400 font-mono text-sm">${chestTotalQty.toLocaleString('vi-VN')}</strong></span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="addSlotToChest('${chest.id}')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 transition flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> <span>Thêm Ô</span>
+                  </button>
+                  <button onclick="removeChest('${chest.id}')" class="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 transition">
+                    <i data-lucide="trash" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grid Slots Preview -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+              ${slotsHtml}
+            </div>
+          `;
+          chestsContainer.appendChild(chestCard);
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    window.openEditSlotModal = function(chestId, slotIndex) {
+      const chest = appState.chests.find(c => c.id === chestId);
+      if (!chest || !chest.slots[slotIndex]) return;
+
+      appState.editingSlot = { chestId, slotIndex };
+      const slot = chest.slots[slotIndex];
+
+      document.getElementById("editItemName").value = slot.name;
+      document.getElementById("editItemQty").value = slot.qty;
+      document.getElementById("editItemModal").classList.remove("hidden");
+    };
+
+    document.getElementById("btnCloseEditModal").addEventListener("click", () => {
+      document.getElementById("editItemModal").classList.add("hidden");
+    });
+
+    document.getElementById("btnSaveSlot").addEventListener("click", () => {
+      if (!appState.editingSlot) return;
+      const { chestId, slotIndex } = appState.editingSlot;
+      const chest = appState.chests.find(c => c.id === chestId);
+      if (!chest) return;
+
+      const newName = document.getElementById("editItemName").value.trim() || "Vật phẩm lạ";
+      const newQty = parseInt(document.getElementById("editItemQty").value) || 1;
+
+      chest.slots[slotIndex] = { name: newName, qty: newQty };
+      document.getElementById("editItemModal").classList.add("hidden");
+      showToast(`Đã cập nhật ô thành ${newName} x${newQty}`, "success");
+      renderAll();
+    });
+
+    document.getElementById("btnDeleteSlot").addEventListener("click", () => {
+      if (!appState.editingSlot) return;
+      const { chestId, slotIndex } = appState.editingSlot;
+      const chest = appState.chests.find(c => c.id === chestId);
+      if (!chest) return;
+
+      chest.slots.splice(slotIndex, 1);
+      document.getElementById("editItemModal").classList.add("hidden");
+      showToast("Đã xóa ô vật phẩm", "info");
+      renderAll();
+    });
+
+    window.addSlotToChest = function(chestId) {
+      const chest = appState.chests.find(c => c.id === chestId);
+      if (!chest) return;
+      chest.slots.push({ name: "Võ sĩ yêu đái", qty: 999 });
+      showToast(`Đã thêm 1 ô mới vào ${chest.title}`, "success");
+      renderAll();
+    };
+
+    window.removeChest = function(chestId) {
+      appState.chests = appState.chests.filter(c => c.id !== chestId);
+      showToast("Đã gỡ rương khỏi danh sách", "info");
+      renderAll();
+    };
+
+    window.copySingleItemSummary = function(name, qty) {
+      const text = `${name}\t${qty}`;
+      copyTextToClipboard(text, `Đã sao chép: ${name} (${qty})`);
+    };
+
+    function copyTextToClipboard(text, successMsg) {
+      const tempTextArea = document.createElement("textarea");
+      tempTextArea.value = text;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, "success");
+      } catch (err) {
+        showToast("Không thể sao chép vào bộ nhớ đệm", "error");
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    // Export to Tab-delimited format (Excel copy paste friendly)
+    document.getElementById("btnCopyTable").addEventListener("click", () => {
+      const summary = calculateInventorySummary();
+      if (summary.length === 0) {
+        showToast("Không có dữ liệu để sao chép", "error");
+        return;
+      }
+      let content = "Tên Vật Phẩm\tSố Ô (Stacks)\tTổng Số Lượng\n";
+      summary.forEach(item => {
+        content += `${item.name}\t${item.stackCount}\t${item.totalQty}\n`;
+      });
+      copyTextToClipboard(content, "Đã sao chép toàn bộ bảng! Bạn có thể dán (Ctrl+V) thẳng vào Excel hoặc Google Sheets.");
+    });
+
+    // Export to CSV
+    document.getElementById("btnExportCSV").addEventListener("click", () => {
+      const summary = calculateInventorySummary();
+      if (summary.length === 0) {
+        showToast("Không có dữ liệu để xuất", "error");
+        return;
+      }
+      let csv = "\uFEFFTên Vật Phẩm,Số Ô Chiếm,Tổng Số Lượng\n";
+      summary.forEach(item => {
+        csv += `"${item.name.replace(/"/g, '""')}",${item.stackCount},${item.totalQty}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `kiem_kho_game_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Đã tải xuống tệp CSV kiểm kho!", "success");
+    });
+
+    const tabSummaryBtn = document.getElementById("tabSummaryBtn");
+    const tabChestsBtn = document.getElementById("tabChestsBtn");
+    const tabSummaryView = document.getElementById("tabSummaryView");
+    const tabChestsView = document.getElementById("tabChestsView");
+
+    tabSummaryBtn.addEventListener("click", () => {
+      tabSummaryBtn.className = "px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow";
+      tabChestsBtn.className = "px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white";
+      tabSummaryView.classList.remove("hidden");
+      tabChestsView.classList.add("hidden");
+      appState.currentTab = "summary";
+    });
+
+    tabChestsBtn.addEventListener("click", () => {
+      tabChestsBtn.className = "px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow";
+      tabSummaryBtn.className = "px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white";
+      tabChestsView.classList.remove("hidden");
+      tabSummaryView.classList.add("hidden");
+      appState.currentTab = "chests";
+    });
+
+    // Sorting buttons
+    document.getElementById("sortByName").addEventListener("click", () => {
+      if (appState.sortBy === "name") {
+        appState.sortDesc = !appState.sortDesc;
+      } else {
+        appState.sortBy = "name";
+        appState.sortDesc = false;
+      }
+      renderAll();
+    });
+
+    document.getElementById("sortByQty").addEventListener("click", () => {
+      if (appState.sortBy === "qty") {
+        appState.sortDesc = !appState.sortDesc;
+      } else {
+        appState.sortBy = "qty";
+        appState.sortDesc = true;
+      }
+      renderAll();
+    });
+
+    // Realtime Search Filter
+    document.getElementById("searchInput").addEventListener("input", (e) => {
+      appState.searchQuery = e.target.value.trim();
+      renderAll();
+    });
+
+    // Load Mock Demo Dataset
+    document.getElementById("btnLoadMock").addEventListener("click", () => {
+      appState.chests = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA));
+      showToast("Đã nạp đầy đủ 4 Rương Mẫu thực tế!", "success");
+      renderAll();
+    });
+
+    // Reset All Data
+    document.getElementById("btnResetAll").addEventListener("click", () => {
+      if (appState.chests.length === 0) return;
+      appState.chests = [];
+      showToast("Đã xóa sạch toàn bộ dữ liệu rương", "info");
+      renderAll();
+    });
+
+    const configModal = document.getElementById("configModal");
+    const inputApiKey = document.getElementById("inputApiKey");
+
+    document.getElementById("btnOpenConfig").addEventListener("click", () => {
+      inputApiKey.value = appState.apiKey;
+      configModal.classList.remove("hidden");
+    });
+
+    document.getElementById("btnCloseConfig").addEventListener("click", () => {
+      configModal.classList.add("hidden");
+    });
+
+    document.getElementById("btnSaveApiKey").addEventListener("click", () => {
+      const key = inputApiKey.value.trim();
+      appState.apiKey = key;
+      localStorage.setItem("gemini_api_key", key);
+      configModal.classList.add("hidden");
+      updateApiKeyUI();
+      showToast(key ? "Đã lưu khóa API thành công!" : "Đã chuyển về chế độ Demo", "success");
+    });
+
+    document.getElementById("btnClearApiKey").addEventListener("click", () => {
+      inputApiKey.value = "";
+      appState.apiKey = "";
+      localStorage.removeItem("gemini_api_key");
+      configModal.classList.add("hidden");
+      updateApiKeyUI();
+      showToast("Đã xóa khóa API", "info");
+    });
+
+    document.getElementById("toggleApiKeyVis").addEventListener("click", () => {
+      inputApiKey.type = inputApiKey.type === "password" ? "text" : "password";
+    });
+
+    // On Load Initialization
+    window.addEventListener("DOMContentLoaded", () => {
+      updateApiKeyUI();
+      // Auto load mock on initial visit so the user has immediate visual feedback
+      appState.chests = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA));
+      renderAll();
+      lucide.createIcons();
+    });
+  </script>
 </body>
 </html>
