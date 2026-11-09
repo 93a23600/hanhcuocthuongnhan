@@ -1,29 +1,36 @@
+let pendingRawImg = null;
+let currentCropRatios = { top: 0, bottom: 0, left: 0, right: 0 };
 let pendingImage = null;
 let pendingCrops = [];
 
-// Hàm tính mã băm hình ảnh 64-bit đơn giản (DHash)
+// 1. Hàm tính mã băm hình ảnh 64-bit (DHash)
 function computeImageHash(imgDataUrl) {
   return new Promise((resolve) => {
+    if (!imgDataUrl) return resolve("");
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      const cvs = document.createElement("canvas");
-      const ctx = cvs.getContext("2d");
-      cvs.width = 9;
-      cvs.height = 8;
-      ctx.drawImage(img, 0, 0, 9, 8);
-      const data = ctx.getImageData(0, 0, 9, 8).data;
-      let hash = "";
-      for (let y = 0; y < 8; y++) {
-        for (let x = 0; x < 8; x++) {
-          const idx1 = (y * 9 + x) * 4;
-          const idx2 = (y * 9 + (x + 1)) * 4;
-          const gray1 = data[idx1] * 0.299 + data[idx1 + 1] * 0.587 + data[idx1 + 2] * 0.114;
-          const gray2 = data[idx2] * 0.299 + data[idx2 + 1] * 0.587 + data[idx2 + 2] * 0.114;
-          hash += gray1 > gray2 ? "1" : "0";
+      try {
+        const cvs = document.createElement("canvas");
+        const ctx = cvs.getContext("2d");
+        cvs.width = 9;
+        cvs.height = 8;
+        ctx.drawImage(img, 0, 0, 9, 8);
+        const data = ctx.getImageData(0, 0, 9, 8).data;
+        let hash = "";
+        for (let y = 0; y < 8; y++) {
+          for (let x = 0; x < 8; x++) {
+            const idx1 = (y * 9 + x) * 4;
+            const idx2 = (y * 9 + (x + 1)) * 4;
+            const gray1 = data[idx1] * 0.299 + data[idx1 + 1] * 0.587 + data[idx1 + 2] * 0.114;
+            const gray2 = data[idx2] * 0.299 + data[idx2 + 1] * 0.587 + data[idx2 + 2] * 0.114;
+            hash += gray1 > gray2 ? "1" : "0";
+          }
         }
+        resolve(hash);
+      } catch (e) {
+        resolve("");
       }
-      resolve(hash);
     };
     img.onerror = () => resolve("");
     img.src = imgDataUrl;
@@ -39,27 +46,147 @@ function getHammingDistance(h1, h2) {
   return diff;
 }
 
-// Cắt 30 ô rương an toàn bằng Canvas
-function sliceGrid30Slots(imgElement) {
+// 2. Nhận diện file ảnh từ Paste hoặc File Input -> Mở Modal Căn Chỉnh Khung
+function handleIncomingFile(file) {
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    alert("Vui lòng chọn hoặc dán đúng tệp hình ảnh!");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const img = new Image();
+    img.onload = () => {
+      pendingRawImg = img;
+      // Nạp thông số lề 4 cạnh đã học từ bộ não vĩnh viễn (nếu chưa có thì để 0)
+      currentCropRatios = Object.assign({}, appState.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 });
+      openCalibrateModal();
+    };
+    img.onerror = () => alert("Không thể đọc định dạng ảnh này!");
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+// 3. Mở Modal Căn Chỉnh và hiển thị lưới 5x6 đè lên ảnh
+function openCalibrateModal() {
+  const modal = document.getElementById("cropCalibrateModal");
+  if (!modal || !pendingRawImg) return;
+
+  const rTop = document.getElementById("rangeCropTop");
+  const rBottom = document.getElementById("rangeCropBottom");
+  const rLeft = document.getElementById("rangeCropLeft");
+  const rRight = document.getElementById("rangeCropRight");
+
+  if (rTop) rTop.value = currentCropRatios.top;
+  if (rBottom) rBottom.value = currentCropRatios.bottom;
+  if (rLeft) rLeft.value = currentCropRatios.left;
+  if (rRight) rRight.value = currentCropRatios.right;
+
+  updateRangeLabels();
+  drawCalibrateGrid();
+  modal.classList.remove("hidden");
+  if (window.lucide) lucide.createIcons();
+}
+
+function updateRangeLabels() {
+  const elTop = document.getElementById("valCropTop");
+  const elBottom = document.getElementById("valCropBottom");
+  const elLeft = document.getElementById("valCropLeft");
+  const elRight = document.getElementById("valCropRight");
+
+  if (elTop) elTop.textContent = `${currentCropRatios.top}%`;
+  if (elBottom) elBottom.textContent = `${currentCropRatios.bottom}%`;
+  if (elLeft) elLeft.textContent = `${currentCropRatios.left}%`;
+  if (elRight) elRight.textContent = `${currentCropRatios.right}%`;
+}
+
+// Vẽ trực tiếp lên Canvas căn chỉnh
+function drawCalibrateGrid() {
+  const canvas = document.getElementById("calibrateCanvas");
+  if (!canvas || !pendingRawImg) return;
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = pendingRawImg.naturalWidth;
+  canvas.height = pendingRawImg.naturalHeight;
+
+  ctx.drawImage(pendingRawImg, 0, 0);
+
+  const x = (currentCropRatios.left / 100) * canvas.width;
+  const y = (currentCropRatios.top / 100) * canvas.height;
+  const w = Math.max(1, canvas.width - x - ((currentCropRatios.right / 100) * canvas.width));
+  const h = Math.max(1, canvas.height - y - ((currentCropRatios.bottom / 100) * canvas.height));
+
+  // Vùng lề tối bao quanh
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, canvas.width, y);
+  ctx.fillRect(0, y + h, canvas.width, canvas.height - (y + h));
+  ctx.fillRect(0, y, x, h);
+  ctx.fillRect(x + w, y, canvas.width - (x + w), h);
+
+  // Viền ngoài khung rương
+  ctx.strokeStyle = "#10b981";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+
+  // Kẻ lưới 5 cột x 6 hàng
+  ctx.strokeStyle = "rgba(52, 211, 153, 0.75)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+
+  const stepX = w / 5;
+  const stepY = h / 6;
+
+  for (let c = 1; c < 5; c++) {
+    ctx.beginPath();
+    ctx.moveTo(x + c * stepX, y);
+    ctx.lineTo(x + c * stepX, y + h);
+    ctx.stroke();
+  }
+  for (let r = 1; r < 6; r++) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + r * stepY);
+    ctx.lineTo(x + w, y + r * stepY);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+// 4. Cắt chính xác 30 ô rương theo khung viền % đã căn chỉnh
+function sliceGridWithRatios(imgElement, ratios) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const cellW = Math.floor(imgElement.naturalWidth / 5);
-  const cellH = Math.floor(imgElement.naturalHeight / 6);
-  canvas.width = cellW;
-  canvas.height = cellH;
+
+  const totalW = imgElement.naturalWidth;
+  const totalH = imgElement.naturalHeight;
+
+  const startX = (ratios.left / 100) * totalW;
+  const startY = (ratios.top / 100) * totalH;
+  const activeW = totalW - startX - ((ratios.right / 100) * totalW);
+  const activeH = totalH - startY - ((ratios.bottom / 100) * totalH);
+
+  const stepX = activeW / 5;
+  const stepY = activeH / 6;
 
   const crops = [];
+  canvas.width = 90;
+  canvas.height = 90;
+
   for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 5; c++) {
-      ctx.clearRect(0, 0, cellW, cellH);
-      ctx.drawImage(imgElement, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+      ctx.clearRect(0, 0, 90, 90);
+      const srcX = startX + c * stepX;
+      const srcY = startY + r * stepY;
+
+      ctx.drawImage(imgElement, srcX, srcY, stepX, stepY, 0, 0, 90, 90);
       crops.push(canvas.toDataURL("image/png"));
     }
   }
   return crops;
 }
 
-// Gọi Gemini Vision
+// 5. Gọi Gemini Vision với bộ nhớ lỗi số lượng
 async function analyzeChestWithGemini(base64Image) {
   let trainingPromptNotes = "";
   if (appState.trainedNumberErrors && appState.trainedNumberErrors.length > 0) {
@@ -95,41 +222,12 @@ Trả về đúng mảng JSON 30 phần tử tương ứng với 30 ô (nếu ô
   return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 
-// Nhận diện file từ Paste hoặc File Input
-function handleIncomingFile(file) {
-  if (!file || !file.type || !file.type.startsWith("image/")) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    const base64 = dataUrl.split(",")[1];
-
-    const img = new Image();
-    img.onload = () => {
-      try {
-        pendingCrops = sliceGrid30Slots(img);
-      } catch (err) {
-        console.error("Lỗi cắt ảnh:", err);
-        pendingCrops = Array(30).fill(dataUrl);
-      }
-      pendingImage = { base64, dataUrl };
-      
-      const previewEl = document.getElementById("uploadPreviewImg");
-      if (previewEl) previewEl.src = dataUrl;
-      
-      openUploadModal();
-    };
-    img.src = dataUrl;
-  };
-  reader.readAsDataURL(file);
-}
-
-// Thực thi nạp rương
+// 6. Thực thi nạp rương sau khi xác nhận tên tài khoản
 async function executeUpload(accountName, chestTitle) {
   if (!pendingImage) return;
   const badge = document.getElementById("readingBadge");
   if (badge) badge.classList.remove("hidden");
-  showToast(`Đang phân tích rương [${accountName} - ${chestTitle}]...`, "info");
+  showToast(`Đang đối chiếu icon và đọc rương [${accountName} - ${chestTitle}]...`, "info");
 
   try {
     let aiSlots = [];
@@ -149,6 +247,7 @@ async function executeUpload(accountName, chestTitle) {
       let assignedName = aiSlots[i]?.name || null;
       let assignedQty = aiSlots[i]?.qty || 0;
 
+      // So khớp mã băm với kho icon đã học
       if (crop && appState.learnedIcons) {
         const cropHash = await computeImageHash(crop);
         let bestMatchName = null;
@@ -195,7 +294,7 @@ async function executeUpload(accountName, chestTitle) {
     appState.viewingChest = chestTitle;
     appState.selectedSlotIndex = 0;
 
-    saveState();
+    saveChestsState();
     showToast(`Đã nạp xong rương [${accountName} - ${chestTitle}]!`, "success");
   } catch (err) {
     showToast("Lỗi phân tích: " + err.message, "error");
