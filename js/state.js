@@ -9,6 +9,7 @@ let appState = {
   accounts: [],
   chests: [],
   // Bộ não học máy vĩnh viễn:
+  learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 },
   learnedIcons: {},        // { "phật kinh": { img: "data:...", hash: "..." } }
   trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
   customKnownItems: [],    // Danh sách tên bạn từng gõ thêm
