@@ -1,247 +1,146 @@
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
   const toast = document.createElement("div");
-  toast.className = `px-4 py-2.5 rounded-xl text-xs font-medium text-white shadow-xl flex items-center gap-2 border transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0 ${
+  toast.className = `px-4 py-2.5 rounded-xl text-xs font-medium text-white shadow-xl flex items-center gap-2 border transition-all pointer-events-auto ${
     type === "success" ? "bg-emerald-950 border-emerald-500 text-emerald-200" :
     type === "error" ? "bg-red-950 border-red-500 text-red-200" :
     "bg-slate-900 border-slate-700 text-slate-200"
   }`;
-  
   const icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
   toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${message}</span>`;
   container.appendChild(toast);
   lucide.createIcons();
-
-  requestAnimationFrame(() => toast.classList.remove("translate-y-2", "opacity-0"));
-  setTimeout(() => {
-    toast.classList.add("translate-y-2", "opacity-0");
-    setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  setTimeout(() => toast.remove(), 3500);
 }
 
 function updateApiKeyUI() {
   const modeBadge = document.getElementById("modeBadge");
   const modeDesc = document.getElementById("modeDesc");
   const apiKeyLabel = document.getElementById("apiKeyLabel");
-
-  if (appState.apiKey && appState.apiKey.trim().length > 0) {
+  if (appState.apiKey) {
     modeBadge.className = "badge-emerald text-xs px-2 py-0.5 rounded-full font-semibold";
     modeBadge.textContent = "Gemini AI Online";
-    modeDesc.innerHTML = `Đã kết nối Gemini API. Khi dán ảnh (<kbd class="px-1 py-0.5 rounded bg-slate-800 text-[10px]">Ctrl+V</kbd>), hệ thống sẽ trực tiếp gọi mô hình AI để nhận diện từng ô đồ.`;
+    modeDesc.textContent = "Đã kết nối API. Khi dán ảnh và xác nhận, AI sẽ quét tự động.";
     apiKeyLabel.textContent = "API: Sẵn Sàng";
   } else {
     modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
     modeBadge.textContent = "Chế độ Demo";
-    modeDesc.textContent = "Chưa cài API Key. Khi dán hoặc thả ảnh, hệ thống sẽ sử dụng bộ dữ liệu giả lập thông minh. Bạn có thể bấm 'Cài đặt API' để kích hoạt AI thực tế.";
+    modeDesc.textContent = "Chưa cài API Key. Khi dán ảnh sẽ nạp dữ liệu mẫu.";
     apiKeyLabel.textContent = "Cài đặt API";
   }
 }
 
-function renderTargetChestSelect() {
-  const select = document.getElementById("targetChestSelect");
-  const currentVal = select.value;
-  select.innerHTML = appState.chests.map((c) => `
-    <option value="${c.id}">${c.title} (${c.slots.length} ô có đồ)</option>
-  `).join("");
-
-  if (currentVal && appState.chests.some(c => c.id === currentVal)) {
-    select.value = currentVal;
+function openUploadModal() {
+  const dl = document.getElementById("accountSuggestions");
+  dl.innerHTML = appState.accounts.map(acc => `<option value="${acc}"></option>`).join("");
+  
+  const accInput = document.getElementById("inputAccountName");
+  if (!accInput.value.trim() && appState.accounts.length > 0) {
+    accInput.value = appState.accounts[appState.accounts.length - 1];
   }
+
+  document.getElementById("confirmUploadModal").classList.remove("hidden");
+  accInput.focus();
+  lucide.createIcons();
 }
 
 function renderAll() {
-  renderTargetChestSelect();
-  const summaryData = calculateInventorySummary();
-  const summaryTableBody = document.getElementById("summaryTableBody");
-  const emptySummaryNotice = document.getElementById("emptySummaryNotice");
+  const filterSelect = document.getElementById("filterAccountSelect");
+  const curFilter = appState.selectedAccFilter;
+  filterSelect.innerHTML = `<option value="ALL">Tất Cả Tài Khoản</option>` + 
+    appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
+  filterSelect.value = curFilter;
 
-  let grandTotalQty = 0;
-  summaryData.forEach(item => {
-    if (!item.isIgnored) grandTotalQty += item.totalQty;
-  });
-
+  const summary = calculateSummary();
+  let grandTotal = 0;
+  summary.forEach(i => { if (!i.isIgnored) grandTotal += i.totalQty; });
+  document.getElementById("statAccCount").textContent = appState.accounts.length;
   document.getElementById("statChestsCount").textContent = appState.chests.length;
-  document.getElementById("statUniqueItems").textContent = summaryData.filter(i => !i.isIgnored).length;
-  document.getElementById("statTotalItems").textContent = grandTotalQty.toLocaleString('vi-VN');
+  document.getElementById("statTotalItems").textContent = grandTotal.toLocaleString('vi-VN');
   document.getElementById("chestTabCount").textContent = appState.chests.length;
 
-  summaryTableBody.innerHTML = "";
-  if (summaryData.length === 0) {
-    emptySummaryNotice.classList.remove("hidden");
+  const tbody = document.getElementById("summaryTableBody");
+  const emptyNotice = document.getElementById("emptySummaryNotice");
+  tbody.innerHTML = "";
+
+  if (summary.length === 0) {
+    emptyNotice.classList.remove("hidden");
   } else {
-    emptySummaryNotice.classList.add("hidden");
-    summaryData.forEach((item, index) => {
+    emptyNotice.classList.add("hidden");
+    summary.forEach((item, idx) => {
       const tr = document.createElement("tr");
-      tr.className = `hover:bg-slate-800/40 transition group border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40 bg-slate-900/30' : ''}`;
-
-      const chestPills = Array.from(item.foundChests).map(c => 
-        `<span class="inline-block px-2 py-0.5 text-[11px] rounded-md bg-slate-800 border border-slate-700/60 text-slate-300 mr-1">${c}</span>`
-      ).join("");
-
+      tr.className = `hover:bg-slate-800/40 transition border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40' : ''}`;
+      const pills = Array.from(item.foundIn).map(f => `<span class="bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 mr-1 border border-slate-700">${f}</span>`).join("");
       tr.innerHTML = `
-        <td class="py-3 px-4 text-center font-mono text-slate-500">${index + 1}</td>
+        <td class="py-3 px-4 text-center font-mono text-slate-500">${idx + 1}</td>
         <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
           <span class="w-2 h-2 rounded-full ${item.isIgnored ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
           <span>${item.name}</span>
-          ${item.isIgnored ? '<span class="text-[10px] text-rose-400 bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-800">Bỏ qua</span>' : ''}
         </td>
+        <td class="py-3 px-4 text-center"><span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">${item.stacks} ô</span></td>
+        <td class="py-3 px-4 text-center">${pills}</td>
+        <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm">${item.totalQty.toLocaleString('vi-VN')}</td>
         <td class="py-3 px-4 text-center">
-          <span class="font-mono bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">${item.stackCount} ô</span>
-        </td>
-        <td class="py-3 px-4 text-center">${chestPills}</td>
-        <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm sm:text-base">
-          ${item.totalQty.toLocaleString('vi-VN')}
-        </td>
-        <td class="py-3 px-4 text-center">
-          <div class="flex items-center justify-center gap-1.5">
-            <button onclick="toggleIgnoreItem('${item.name}')" title="${item.isIgnored ? 'Bật theo dõi lại' : 'Bỏ qua không kiểm'}" class="p-1.5 rounded-lg ${item.isIgnored ? 'bg-sky-900/60 text-sky-300 border border-sky-700' : 'bg-slate-800 text-slate-400 hover:text-amber-400'} transition">
-              <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
-            </button>
-            <button onclick="copySingleItemSummary('${item.name}', ${item.totalQty})" title="Sao chép tên & số lượng" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
+          <button onclick="toggleIgnoreItem('${item.name}')" title="Bỏ qua / Theo dõi lại" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400">
+            <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
+          </button>
         </td>
       `;
-      summaryTableBody.appendChild(tr);
+      tbody.appendChild(tr);
     });
   }
 
-  const chestsContainer = document.getElementById("chestsContainer");
-  const emptyChestNotice = document.getElementById("emptyChestNotice");
-  chestsContainer.innerHTML = "";
-
+  const container = document.getElementById("chestsContainer");
+  const emptyChest = document.getElementById("emptyChestNotice");
+  container.innerHTML = "";
   if (appState.chests.length === 0) {
-    emptyChestNotice.classList.remove("hidden");
+    emptyChest.classList.remove("hidden");
   } else {
-    emptyChestNotice.classList.add("hidden");
-    appState.chests.forEach((chest, chestIdx) => {
-      const chestCard = document.createElement("div");
-      chestCard.className = "bg-game-card border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4";
-      
-      let chestTotalQty = 0;
-      chest.slots.forEach(s => chestTotalQty += (parseInt(s.qty) || 0));
-
-      const slotsHtml = chest.slots.map((slot, slotIdx) => `
-        <div onclick="openEditSlotModal('${chest.id}', ${slotIdx})" class="group cursor-pointer bg-game-slot border border-slate-800 hover:border-emerald-500/80 rounded-xl p-2.5 flex flex-col justify-between transition relative hover:scale-105">
-          <div class="text-[11px] font-medium text-slate-300 truncate" title="${slot.name}">
-            ${slot.name}
-          </div>
-          <div class="mt-2 flex items-center justify-between">
-            <span class="text-[10px] text-slate-500">Ô ${slotIdx + 1}</span>
-            <span class="text-xs font-mono font-bold text-amber-400">x${slot.qty}</span>
-          </div>
+    emptyChest.classList.add("hidden");
+    appState.chests.forEach(chest => {
+      const card = document.createElement("div");
+      card.className = "bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3";
+      const slotsHtml = chest.slots.map((s) => `
+        <div class="bg-game-slot p-2 rounded-xl border border-slate-800 text-[11px] flex justify-between">
+          <span class="text-slate-300 truncate">${s.name}</span>
+          <span class="text-amber-400 font-mono font-bold">x${s.qty}</span>
         </div>
       `).join("");
 
-      chestCard.innerHTML = `
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center text-emerald-400 font-bold text-sm">
-              ${chestIdx + 1}
-            </div>
-            <div>
-              <h3 class="font-bold text-white text-base">${chest.title}</h3>
-              <p class="text-xs text-slate-400">Thời gian: ${chest.createdAt || 'N/A'} &bull; ${chest.slots.length} ô có đồ</p>
-            </div>
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div>
+            <span class="text-emerald-400 font-bold text-xs bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded mr-1">${chest.account}</span>
+            <strong class="text-white text-sm">${chest.title}</strong>
           </div>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <span class="text-xs text-slate-400">Tổng: <strong class="text-amber-400 font-mono text-sm">${chestTotalQty.toLocaleString('vi-VN')}</strong></span>
-            <div class="flex items-center gap-1.5">
-              <button onclick="addSlotToChest('${chest.id}')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 transition flex items-center gap-1">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> <span>Thêm Ô</span>
-              </button>
-              <button onclick="renameChestPrompt('${chest.id}')" title="Đổi tên rương" class="p-1 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition">
-                <i data-lucide="edit-2" class="w-4 h-4"></i>
-              </button>
-              <button onclick="removeChest('${chest.id}')" title="Xoá rương" class="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 transition">
-                <i data-lucide="trash" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
+          <button onclick="removeChest('${chest.id}')" class="text-slate-500 hover:text-red-400 text-xs"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-          ${slotsHtml || '<p class="col-span-full py-4 text-center text-slate-500 italic">Rương chưa có vật phẩm</p>'}
-        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">${slotsHtml || '<p class="text-slate-600 text-xs italic">Trống</p>'}</div>
       `;
-      chestsContainer.appendChild(chestCard);
+      container.appendChild(card);
     });
   }
 
   renderDiffView();
-  renderChestManagerModal();
   lucide.createIcons();
 }
 
 function renderDiffView() {
   const incList = document.getElementById("diffIncreasedList");
   const decList = document.getElementById("diffDecreasedList");
-
   if (!appState.snapshot) {
-    incList.innerHTML = `<p class="text-slate-500 italic py-4 text-center">Chưa có mốc so sánh. Bấm "Lưu Mốc So Sánh" để ghi nhận trạng thái kho ban đầu.</p>`;
-    decList.innerHTML = `<p class="text-slate-500 italic py-4 text-center">Chưa có mốc so sánh.</p>`;
+    incList.innerHTML = `<p class="text-slate-600 italic py-3 text-center">Chưa có mốc so sánh.</p>`;
+    decList.innerHTML = `<p class="text-slate-600 italic py-3 text-center">Chưa có mốc so sánh.</p>`;
     return;
   }
+  const cur = {};
+  appState.chests.forEach(c => c.slots.forEach(s => cur[s.name] = (cur[s.name] || 0) + (parseInt(s.qty) || 0)));
+  const allNames = Array.from(new Set([...Object.keys(cur), ...Object.keys(appState.snapshot)]));
+  const diffs = allNames.map(name => ({ name, diff: (cur[name] || 0) - (appState.snapshot[name] || 0) }));
 
-  const currentTotals = {};
-  appState.chests.forEach(c => {
-    c.slots.forEach(s => {
-      if (!s.name) return;
-      currentTotals[s.name] = (currentTotals[s.name] || 0) + (parseInt(s.qty) || 0);
-    });
-  });
+  const inc = diffs.filter(d => d.diff > 0).sort((a,b) => b.diff - a.diff);
+  const dec = diffs.filter(d => d.diff < 0).sort((a,b) => a.diff - b.diff);
 
-  const snapTotals = appState.snapshot;
-  const allNames = Array.from(new Set([...Object.keys(currentTotals), ...Object.keys(snapTotals)]));
-
-  const diffs = allNames.map(name => {
-    const cur = currentTotals[name] || 0;
-    const old = snapTotals[name] || 0;
-    return { name, diff: cur - old, cur, old };
-  });
-
-  const inc = diffs.filter(d => d.diff > 0).sort((a, b) => b.diff - a.diff);
-  const dec = diffs.filter(d => d.diff < 0).sort((a, b) => a.diff - b.diff);
-
-  incList.innerHTML = inc.length === 0 ? '<p class="text-slate-500 italic py-3 text-center">Không có vật phẩm nào tăng thêm.</p>' :
-    inc.map(d => `
-      <div class="flex items-center justify-between p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-        <span class="font-medium text-slate-200">${d.name}</span>
-        <div class="text-right">
-          <span class="text-emerald-400 font-bold font-mono text-sm">+${d.diff.toLocaleString('vi-VN')}</span>
-          <span class="text-[10px] text-slate-500 block">(${d.old.toLocaleString()} &rarr; ${d.cur.toLocaleString()})</span>
-        </div>
-      </div>
-    `).join("");
-
-  decList.innerHTML = dec.length === 0 ? '<p class="text-slate-500 italic py-3 text-center">Không có vật phẩm nào hao hụt.</p>' :
-    dec.map(d => `
-      <div class="flex items-center justify-between p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-        <span class="font-medium text-slate-200">${d.name}</span>
-        <div class="text-right">
-          <span class="text-rose-400 font-bold font-mono text-sm">${d.diff.toLocaleString('vi-VN')}</span>
-          <span class="text-[10px] text-slate-500 block">(${d.old.toLocaleString()} &rarr; ${d.cur.toLocaleString()})</span>
-        </div>
-      </div>
-    `).join("");
-}
-
-function renderChestManagerModal() {
-  const container = document.getElementById("modalChestListContainer");
-  container.innerHTML = appState.chests.map(c => `
-    <div class="flex items-center justify-between gap-2 p-2 bg-slate-950 border border-slate-800 rounded-xl">
-      <input type="text" value="${c.title}" onchange="updateChestTitle('${c.id}', this.value)" class="bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-slate-200 flex-1 text-xs focus:outline-none focus:border-sky-500 font-medium">
-      <span class="text-[11px] text-slate-500">${c.slots.length} ô</span>
-      <button onclick="removeChest('${c.id}')" title="Xóa rương" class="text-slate-400 hover:text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-    </div>
-  `).join("");
-
-  const chips = document.getElementById("modalIgnoredChips");
-  chips.innerHTML = appState.ignoredItems.length === 0 ? '<span class="text-slate-500 italic">Chưa bỏ qua vật phẩm nào</span>' :
-    appState.ignoredItems.map(name => `
-      <span class="bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700 flex items-center gap-1.5 text-xs">
-        ${name}
-        <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-400" onclick="toggleIgnoreItem('${name}')"></i>
-      </span>
-    `).join("");
+  incList.innerHTML = inc.map(d => `<div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between"><span>${d.name}</span><b class="text-emerald-400 font-mono">+${d.diff.toLocaleString()}</b></div>`).join("") || '<p class="text-slate-600 italic">Không có</p>';
+  decList.innerHTML = dec.map(d => `<div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between"><span>${d.name}</span><b class="text-rose-400 font-mono">${d.diff.toLocaleString()}</b></div>`).join("") || '<p class="text-slate-600 italic">Không có</p>';
 }
