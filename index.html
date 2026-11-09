@@ -202,10 +202,14 @@
 
             <!-- Form cập nhật -->
             <div class="space-y-2.5 text-xs">
-              <div>
+              <!-- Ô tìm kiếm & gợi ý thông minh (Thay thế datalist cũ) -->
+              <div class="relative">
                 <label class="text-slate-300 font-bold block mb-1 text-[11px]">Tên Vật Phẩm Chuẩn:</label>
-                <input type="text" id="sidePanelItemName" list="knownItemsDatalist" placeholder="Nhập tên chuẩn..." class="w-full bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold text-xs">
-                <datalist id="knownItemsDatalist"></datalist>
+                <input type="text" id="sidePanelItemName" autocomplete="off" placeholder="Gõ để tìm hoặc thêm tên mới..." class="w-full bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold text-xs">
+                
+                <!-- Bảng danh sách gợi ý xổ xuống mượt mà -->
+                <div id="customAutocompleteList" class="hidden absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 divide-y divide-slate-800 text-xs">
+                </div>
               </div>
 
               <div>
