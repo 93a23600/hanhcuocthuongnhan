@@ -128,7 +128,7 @@ function renderDropdownSuggestions(query = "") {
   }
 }
 
-/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 30 Ô */
+/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 35 Ô (5x7) */
 function renderGameGridChest() {
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc && appState.accounts && appState.accounts.length > 0) {
@@ -150,7 +150,8 @@ function renderGameGridChest() {
   let filledCount = 0;
   container.innerHTML = "";
 
-  for (let i = 0; i < 30; i++) {
+  // CHUẨN 35 Ô (5 cột x 7 hàng)
+  for (let i = 0; i < 35; i++) {
     const slot = (chest && chest.slots) ? chest.slots[i] : null;
     const hasItem = slot && slot.name;
     if (hasItem) filledCount++;
@@ -176,7 +177,7 @@ function renderGameGridChest() {
   }
 
   if (countLabel) {
-    countLabel.textContent = `${filledCount}/30 ô có đồ`;
+    countLabel.textContent = `${filledCount}/35 ô có đồ`;
   }
   
   const curSlot = (chest && chest.slots) ? chest.slots[appState.selectedSlotIndex] : null;
