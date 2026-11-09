@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trợ Lý Kiểm Kho Game - Auto Inventory Auditor</title>
+  <title>Kiểm Kho Game AI - Auto Inventory Auditor</title>
   
-  <!-- CDN Tailwind CSS & Lucide Icons -->
+  <!-- CDN Thư viện -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <script>
@@ -19,243 +19,174 @@
         extend: {
           fontFamily: { sans: ['Inter', 'sans-serif'] },
           colors: {
-            brand: {
-              50: '#ecfdf5', 500: '#10b981', 600: '#059669',
-              700: '#047857', 800: '#065f46', 900: '#064e3b',
-            },
-            game: {
-              panel: '#151d28', card: '#1e293b', slot: '#0f172a', accent: '#f59e0b',
-            }
+            brand: { 500: '#10b981', 600: '#059669' },
+            game: { panel: '#151d28', card: '#1e293b', slot: '#0f172a' }
           }
         }
       }
     }
   </script>
-  <style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    .drop-active {
-      border-color: #10b981 !important;
-      background-color: rgba(16, 185, 129, 0.08) !important;
-      transform: scale(1.005);
-    }
-    .badge-amber {
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: #fbbf24;
-    }
-    .badge-emerald {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #34d399;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[#0b0f17] text-slate-200 min-h-screen font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white">
 
   <!-- Header Bar -->
   <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30 text-white font-black text-xl">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg text-white font-black text-xl">
           <i data-lucide="package-search" class="w-6 h-6"></i>
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-lg font-bold tracking-tight text-white">Kiểm Kho Game AI</h1>
-            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Vision Auditor</span>
+            <h1 class="text-lg font-bold text-white">Kiểm Kho Game AI</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Auditor</span>
           </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Dán (Ctrl+V) &bull; Nhập tên Acc &bull; Cập nhật rương 1 2 3</p>
+          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Bấm Ctrl+V &bull; Nhập tên Acc &bull; Cập nhật rương 1 2 3</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2.5">
-        <button id="btnLoadMock" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition shadow-sm">
+        <button id="btnLoadMock" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
           <span>Nạp Mẫu Test</span>
         </button>
-        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
           <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
           <span id="apiKeyLabel">Cài đặt API</span>
         </button>
-        <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/40 transition">
+        <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
 
     <!-- Upload & Paste Zone -->
-    <section class="bg-game-card border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-      <div class="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
+    <section class="bg-game-card border border-slate-800 rounded-2xl p-5 shadow-xl">
       <div class="flex flex-col md:flex-row gap-5 items-stretch">
-        <!-- Vùng dán ảnh: Click vào để focus dán Ctrl+V thoải mái, chỉ click đúng chữ 'chọn tệp' mới mở file explorer -->
-        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-default transition group focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50">
+        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-default transition focus:outline-none focus:border-emerald-500">
           <input type="file" id="fileInput" accept="image/*" class="hidden" />
-          <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3">
             <i data-lucide="image-plus" class="w-7 h-7"></i>
           </div>
           <h3 class="font-semibold text-white text-base">
-            Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> để dán ảnh (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline underline-offset-2 hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
+            Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> để dán ảnh (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
           </h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-md">
-            Hỗ trợ kéo thả ảnh vào khung hoặc bấm Ctrl + V ở bất kỳ đâu trên màn hình.
-          </p>
-          <div class="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] text-slate-400">
-            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Tự động nhận diện lưới 30 ô</span>
+          <p class="text-xs text-slate-400 mt-1 max-w-md">Kéo thả ảnh vào khung hoặc bấm Ctrl + V ở bất kỳ đâu trên trang này.</p>
+          <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
+            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Lưới 30 ô</span>
             <span id="readingBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold animate-pulse">
               <i data-lucide="loader-2" class="w-3 h-3 inline animate-spin"></i> Đang phân tích rương...
             </span>
           </div>
         </div>
 
-        <!-- Trạng thái & Thống kê nhanh -->
         <div class="w-full md:w-80 bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
           <div>
             <div class="flex items-center justify-between text-xs mb-2">
               <span class="text-slate-400 font-medium">Chế độ phân tích:</span>
               <span id="modeBadge" class="badge-amber text-xs px-2 py-0.5 rounded-full font-semibold">Chế độ Demo</span>
             </div>
-            <p id="modeDesc" class="text-xs text-slate-400 leading-relaxed">
-              Bạn chưa thiết lập Gemini API Key.
-            </p>
+            <p id="modeDesc" class="text-xs text-slate-400 leading-relaxed">Bạn chưa thiết lập Gemini API Key.</p>
           </div>
-
-          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
-            <div class="flex justify-between text-slate-400">
-              <span>Số tài khoản (Acc):</span>
-              <strong id="statAccCount" class="text-white">0</strong>
-            </div>
-            <div class="flex justify-between text-slate-400">
-              <span>Tổng số rương đã nạp:</span>
-              <strong id="statChestsCount" class="text-white">0</strong>
-            </div>
-            <div class="flex justify-between text-slate-400">
-              <span>Tổng lượng vật phẩm:</span>
-              <strong id="statTotalItems" class="text-amber-400 font-bold">0</strong>
-            </div>
+          <div class="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex justify-between text-slate-400"><span>Số tài khoản (Acc):</span><strong id="statAccCount" class="text-white">0</strong></div>
+            <div class="flex justify-between text-slate-400"><span>Tổng rương đã nạp:</span><strong id="statChestsCount" class="text-white">0</strong></div>
+            <div class="flex justify-between text-slate-400"><span>Tổng vật phẩm:</span><strong id="statTotalItems" class="text-amber-400 font-bold">0</strong></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Tabs & Bộ lọc -->
+    <!-- Navigation Tabs & Tools -->
     <section class="space-y-4">
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
           <button id="tabSummaryBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
-            <i data-lucide="layout-grid" class="w-4 h-4"></i>
-            <span>Tổng Hợp Toàn Kho</span>
+            <i data-lucide="layout-grid" class="w-4 h-4"></i><span>Tổng Hợp Toàn Kho</span>
           </button>
           <button id="tabChestsBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
-            <i data-lucide="archive" class="w-4 h-4"></i>
-            <span>Chi Tiết Từng Rương (<span id="chestTabCount">0</span>)</span>
+            <i data-lucide="archive" class="w-4 h-4"></i><span>Chi Tiết Từng Rương (<span id="chestTabCount">0</span>)</span>
           </button>
           <button id="tabDiffBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
-            <i data-lucide="trending-up-down" class="w-4 h-4 text-amber-400"></i>
-            <span>Biến Động Hao / Đầy</span>
+            <i data-lucide="trending-up-down" class="w-4 h-4 text-amber-400"></i><span>Biến Động Hao / Đầy</span>
           </button>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-          <!-- Chọn lọc theo từng Acc -->
-          <select id="filterAccountSelect" class="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-emerald-400 focus:outline-none focus:border-emerald-500 font-semibold">
+          <select id="filterAccountSelect" class="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-emerald-400 font-semibold">
             <option value="ALL">Tất Cả Tài Khoản</option>
           </select>
-
           <div class="relative flex-1 sm:w-52 min-w-[150px]">
             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="searchInput" placeholder="Tìm vật phẩm..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            <input type="text" id="searchInput" placeholder="Tìm vật phẩm..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-slate-200">
           </div>
-
-          <label class="text-xs text-slate-400 flex items-center gap-1 cursor-pointer select-none bg-slate-900 px-2.5 py-1.5 border border-slate-800 rounded-lg">
-            <input type="checkbox" id="chkShowIgnored" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0"> 
+          <label class="text-xs text-slate-400 flex items-center gap-1 cursor-pointer bg-slate-900 px-2.5 py-1.5 border border-slate-800 rounded-lg">
+            <input type="checkbox" id="chkShowIgnored" class="rounded bg-slate-950 border-slate-700 text-emerald-500"> 
             <span>Hiện item bỏ qua</span>
           </label>
-
-          <button id="btnCopyTable" title="Sao chép bảng dán vào Excel" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <button id="btnCopyTable" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
             <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 text-amber-400"></i>
             <span class="hidden sm:inline">Sao Chép</span>
           </button>
         </div>
       </div>
 
-      <!-- TAB 1: SUMMARY DASHBOARD -->
+      <!-- Tab 1: Tổng Kho -->
       <div id="tabSummaryView" class="space-y-4">
         <div class="bg-game-card border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm border-collapse">
               <thead>
-                <tr class="bg-slate-900/90 border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                <tr class="bg-slate-900/90 border-b border-slate-800 text-slate-400 text-xs uppercase font-semibold">
                   <th class="py-3 px-4 w-12 text-center">#</th>
-                  <th class="py-3 px-4 cursor-pointer hover:text-white transition" id="sortByName">
-                    <div class="flex items-center gap-1.5">Tên Vật Phẩm <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
-                  </th>
-                  <th class="py-3 px-4 text-center">Số Ô Chiếm (Stacks)</th>
+                  <th class="py-3 px-4 cursor-pointer hover:text-white" id="sortByName"><div class="flex items-center gap-1">Tên Vật Phẩm <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div></th>
+                  <th class="py-3 px-4 text-center">Số Ô (Stacks)</th>
                   <th class="py-3 px-4 text-center">Tài Khoản & Rương Chứa</th>
-                  <th class="py-3 px-4 text-right cursor-pointer hover:text-white transition" id="sortByQty">
-                    <div class="flex items-center justify-end gap-1.5">Tổng Số Lượng <i data-lucide="arrow-down" class="w-3 h-3 text-emerald-400"></i></div>
-                  </th>
+                  <th class="py-3 px-4 text-right cursor-pointer hover:text-white" id="sortByQty"><div class="flex items-center justify-end gap-1">Tổng Số Lượng <i data-lucide="arrow-down" class="w-3 h-3 text-emerald-400"></i></div></th>
                   <th class="py-3 px-4 text-center w-28">Thao Tác</th>
                 </tr>
               </thead>
-              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-slate-300 text-xs sm:text-sm"></tbody>
+              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-xs sm:text-sm"></tbody>
             </table>
           </div>
           <div id="emptySummaryNotice" class="py-16 text-center text-slate-500 space-y-2">
             <i data-lucide="box" class="w-12 h-12 mx-auto text-slate-600 mb-2"></i>
             <p class="text-sm font-medium">Chưa có dữ liệu rương nào.</p>
-            <p class="text-xs text-slate-500">Chụp màn hình rương trong game và dán (Ctrl+V) để chọn Acc và Rương nạp đồ.</p>
           </div>
         </div>
       </div>
 
-      <!-- TAB 2: CHI TIẾT TỪNG RƯƠNG -->
+      <!-- Tab 2: Chi Tiết Rương -->
       <div id="tabChestsView" class="hidden space-y-6">
         <div id="chestsContainer" class="space-y-6"></div>
-        <div id="emptyChestNotice" class="bg-game-card border border-slate-800 rounded-2xl p-12 text-center text-slate-500 space-y-2">
-          <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-600"></i>
+        <div id="emptyChestNotice" class="bg-game-card border border-slate-800 rounded-2xl p-12 text-center text-slate-500">
           <p class="text-sm font-medium">Chưa có rương nào được nạp.</p>
         </div>
       </div>
 
-      <!-- TAB 3: BIẾN ĐỘNG HAO / ĐẦY -->
+      <!-- Tab 3: Biến Động Hao / Đầy -->
       <div id="tabDiffView" class="hidden space-y-4">
         <div class="bg-game-card border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i data-lucide="git-compare" class="w-4 h-4 text-emerald-400"></i>
-              <span>So Sánh Biến Động Kho (Hao Hụt & Tăng Thêm)</span>
-            </h3>
-            <p class="text-xs text-slate-400">Lưu mốc so sánh trước khi gom đồ / rút đồ để theo dõi số lượng tăng giảm.</p>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="git-compare" class="w-4 h-4 text-emerald-400"></i><span>So Sánh Biến Động Kho</span></h3>
+            <p class="text-xs text-slate-400">Lưu mốc so sánh trước khi gom/trả đồ để theo dõi biến động.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btnCreateSnapshot" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-              <span>Lưu Mốc So Sánh</span>
-            </button>
-            <button id="btnClearSnapshot" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition">
-              Xóa Mốc
-            </button>
+            <button id="btnCreateSnapshot" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5"></i><span>Lưu Mốc So Sánh</span></button>
+            <button id="btnClearSnapshot" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Xóa Mốc</button>
           </div>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
-            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="trending-up" class="w-4 h-4"></i> Đầy Lên Nhiều Nhất (Nạp thêm)
-            </span>
+            <span class="text-xs font-bold text-emerald-400 uppercase flex items-center gap-1.5"><i data-lucide="trending-up" class="w-4 h-4"></i> Đầy Lên (Nạp thêm)</span>
             <div id="diffIncreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
           </div>
           <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
-            <span class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="trending-down" class="w-4 h-4"></i> Hao Đi Nhiều Nhất (Bị lấy ra)
-            </span>
+            <span class="text-xs font-bold text-rose-400 uppercase flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> Hao Đi (Bị lấy ra)</span>
             <div id="diffDecreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
           </div>
         </div>
@@ -263,17 +194,13 @@
     </section>
   </main>
 
-  <!-- MODAL XÁC NHẬN NẠP ẢNH: NHẬP TÊN ACC & CHỌN RƯƠNG -->
+  <!-- MODAL POPUP: NHẬP TÊN ACC & CHỌN RƯƠNG -->
   <div id="confirmUploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i>
-          <span>Xác Nhận Nạp Ảnh Rương</span>
-        </h3>
+        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i><span>Xác Nhận Nạp Ảnh Rương</span></h3>
         <button id="btnCancelUpload" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
       <div class="flex items-center gap-3 p-2 bg-slate-950 rounded-xl border border-slate-800">
         <img id="uploadPreviewImg" src="" class="w-16 h-16 object-cover rounded-lg border border-slate-700 bg-slate-900">
         <div class="text-xs text-slate-400">
@@ -281,34 +208,27 @@
           <span>Điền tên tài khoản và chọn rương tương ứng.</span>
         </div>
       </div>
-
       <div class="space-y-3 text-xs">
         <div>
           <label class="text-slate-300 font-bold block mb-1">1. Tên Tài Khoản (Acc):</label>
-          <div class="relative">
-            <input type="text" id="inputAccountName" list="accountSuggestions" placeholder="Nhập tên tài khoản (VD: Main, Clone 01, Nick Cam...)" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-semibold">
-            <datalist id="accountSuggestions"></datalist>
-          </div>
-          <p class="text-[11px] text-slate-500 mt-1 italic">Bạn có thể gõ bất kỳ tên gì, hệ thống sẽ tự nhớ để gợi ý lần sau.</p>
+          <input type="text" id="inputAccountName" list="accountSuggestions" placeholder="Gõ tên acc bất kỳ (VD: Main, Clone 01...)" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold">
+          <datalist id="accountSuggestions"></datalist>
         </div>
-
         <div>
           <label class="text-slate-300 font-bold block mb-1">2. Chọn Rương Cần Nạp:</label>
-          <div class="grid grid-cols-4 gap-2" id="chestNumberSelector">
-            <button type="button" class="btn-chest-num py-2 rounded-xl border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold transition" data-num="Rương 1">Rương 1</button>
-            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:border-emerald-500 transition" data-num="Rương 2">Rương 2</button>
-            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:border-emerald-500 transition" data-num="Rương 3">Rương 3</button>
-            <button type="button" id="btnCustomChestNum" class="py-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 hover:text-white font-semibold transition">+ Khác</button>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold" data-num="Rương 1">Rương 1</button>
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold" data-num="Rương 2">Rương 2</button>
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold" data-num="Rương 3">Rương 3</button>
+            <button type="button" id="btnCustomChestNum" class="py-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 font-semibold">+ Khác</button>
           </div>
-          <input type="text" id="customChestInput" placeholder="Nhập tên rương (VD: Rương 4, Kho Bang...)" class="hidden mt-2 w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+          <input type="text" id="customChestInput" placeholder="Nhập tên rương khác..." class="hidden mt-2 w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
         </div>
       </div>
-
       <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-        <button id="btnDismissUpload" class="px-3 py-2 text-xs text-slate-400 hover:bg-slate-800 rounded-xl font-medium">Hủy Bỏ</button>
+        <button id="btnDismissUpload" class="px-3 py-2 text-xs text-slate-400 hover:bg-slate-800 rounded-xl">Hủy</button>
         <button id="btnConfirmUpload" class="px-4 py-2 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-900/30">
-          <i data-lucide="check" class="w-4 h-4"></i>
-          <span>Cập Nhật Rương</span>
+          <i data-lucide="check" class="w-4 h-4"></i><span>Cập Nhật Rương</span>
         </button>
       </div>
     </div>
@@ -318,568 +238,24 @@
   <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
-          <h2 class="text-base font-bold text-white">Cấu hình Gemini Vision API</h2>
-        </div>
+        <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i> Cấu hình Gemini API</h2>
         <button id="btnCloseConfig" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <p class="text-xs text-slate-400 leading-relaxed">
-        Nhập Google Gemini API Key để hệ thống tự động bóc tách số lượng khi dán ảnh. Khóa lưu trên LocalStorage máy bạn.
-      </p>
-      <div class="space-y-2">
-        <label class="text-xs font-semibold text-slate-300">Gemini API Key</label>
-        <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
-      </div>
-      <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-        <button id="btnClearApiKey" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Khóa</button>
-        <button id="btnSaveApiKey" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Lưu Cấu Hình</button>
+      <input type="password" id="inputApiKey" placeholder="Nhập khóa API Gemini..." class="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+      <div class="pt-2 flex justify-end gap-2">
+        <button id="btnClearApiKey" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg">Xóa Khóa</button>
+        <button id="btnSaveApiKey" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold">Lưu Cấu Hình</button>
       </div>
     </div>
   </div>
 
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- SCRIPT LOGIC HOÀN CHỈNH -->
-  <script>
-    const STORAGE_KEY = "HKTN_INVENTORY_DATA_MULTI_ACC_V2";
-    const KNOWN_ITEMS = [
-      "Võ sĩ yêu đái", "Quỷ Hồn", "Linh Tán", "Thiết bát quái", "Linh Cầm",
-      "Cánh dơi", "Vòng Bạch Ngọc", "Canh Mộc Bài", "Mặt nạ Võ sĩ", "Bùa vàng",
-      "Linh Tiêu", "Võ sĩ đao", "Lệnh bài sư môn Ngũ Độc", "Bạch Ngưu Lân",
-      "Toái cốt", "Da hổ", "Huyết Nha vũ", "Thuốc nổ", "Linh Địch", "Tàn thương",
-      "Đại Cang đao", "Phù ấn", "Linh Quả", "Giáp xác phiến", "Găng tay",
-      "Bí kíp / Sách vàng", "Tê Ngưu Cung"
-    ];
-
-    let appState = {
-      apiKey: localStorage.getItem("gemini_api_key") || "",
-      accounts: [], // Lưu các tên account người dùng đã từng gõ
-      chests: [], // { id, account, title: "Rương 1", slots: [{name, qty}] }
-      ignoredItems: [],
-      snapshot: null,
-      searchQuery: "",
-      selectedAccFilter: "ALL",
-      showIgnored: false,
-      sortBy: "qty",
-      sortDesc: true,
-      currentTab: "summary"
-    };
-
-    let pendingImage = null;
-    let selectedChestNum = "Rương 1";
-
-    function loadState() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          appState.accounts = parsed.accounts || [];
-          appState.chests = parsed.chests || [];
-          appState.ignoredItems = parsed.ignoredItems || [];
-          appState.snapshot = parsed.snapshot || null;
-        } catch (e) { console.error(e); }
-      }
-    }
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        accounts: appState.accounts,
-        chests: appState.chests,
-        ignoredItems: appState.ignoredItems,
-        snapshot: appState.snapshot
-      }));
-      renderAll();
-    }
-
-    function showToast(message, type = "info") {
-      const container = document.getElementById("toastContainer");
-      const toast = document.createElement("div");
-      toast.className = `px-4 py-2.5 rounded-xl text-xs font-medium text-white shadow-xl flex items-center gap-2 border transition-all duration-300 pointer-events-auto ${
-        type === "success" ? "bg-emerald-950 border-emerald-500 text-emerald-200" :
-        type === "error" ? "bg-red-950 border-red-500 text-red-200" :
-        "bg-slate-900 border-slate-700 text-slate-200"
-      }`;
-      const icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
-      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${message}</span>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-      setTimeout(() => toast.remove(), 3500);
-    }
-
-    function updateApiKeyUI() {
-      const modeBadge = document.getElementById("modeBadge");
-      const modeDesc = document.getElementById("modeDesc");
-      const apiKeyLabel = document.getElementById("apiKeyLabel");
-      if (appState.apiKey) {
-        modeBadge.className = "badge-emerald text-xs px-2 py-0.5 rounded-full font-semibold";
-        modeBadge.textContent = "Gemini AI Online";
-        modeDesc.textContent = "Đã kết nối API. Khi dán ảnh và xác nhận, AI sẽ quét tự động.";
-        apiKeyLabel.textContent = "API: Sẵn Sàng";
-      } else {
-        modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
-        modeBadge.textContent = "Chế độ Demo";
-        modeDesc.textContent = "Chưa cài API Key. Khi dán ảnh sẽ nạp dữ liệu mẫu.";
-        apiKeyLabel.textContent = "Cài đặt API";
-      }
-    }
-
-    // AI Vision
-    async function analyzeChestWithGemini(base64Image) {
-      const prompt = `Trích xuất tất cả các ô vật phẩm trong rương đồ game này.
-Danh mục tên vật phẩm chuẩn: ${JSON.stringify(KNOWN_ITEMS)}.
-Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: "image/png", data: base64Image } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
-      });
-      if (!response.ok) throw new Error("Lỗi API Gemini");
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return JSON.parse(text);
-    }
-
-    function handleIncomingFile(file) {
-      if (!file || !file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target.result;
-        const base64 = dataUrl.split(",")[1];
-        pendingImage = { base64, dataUrl };
-
-        document.getElementById("uploadPreviewImg").src = dataUrl;
-        openUploadModal();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function openUploadModal() {
-      // Cập nhật danh sách gợi ý tài khoản đã có
-      const dl = document.getElementById("accountSuggestions");
-      dl.innerHTML = appState.accounts.map(acc => `<option value="${acc}"></option>`).join("");
-      
-      const accInput = document.getElementById("inputAccountName");
-      // Mặc định điền acc gần nhất nếu có
-      if (!accInput.value.trim() && appState.accounts.length > 0) {
-        accInput.value = appState.accounts[appState.accounts.length - 1];
-      }
-
-      document.getElementById("confirmUploadModal").classList.remove("hidden");
-      accInput.focus();
-      lucide.createIcons();
-    }
-
-    async function executeUpload(accountName, chestTitle) {
-      if (!pendingImage) return;
-      const badge = document.getElementById("readingBadge");
-      badge.classList.remove("hidden");
-      showToast(`Đang quét ảnh nạp vào [${accountName} - ${chestTitle}]...`, "info");
-
-      try {
-        let slots = [];
-        if (appState.apiKey) {
-          slots = await analyzeChestWithGemini(pendingImage.base64);
-        } else {
-          await new Promise(r => setTimeout(r, 600));
-          slots = [
-            { name: "Võ sĩ yêu đái", qty: 999 },
-            { name: "Linh Cầm", qty: 999 },
-            { name: "Quỷ Hồn", qty: 999 },
-            { name: "Toái cốt", qty: 500 }
-          ];
-        }
-
-        // Lưu account vào danh sách nếu chưa có
-        if (!appState.accounts.includes(accountName)) {
-          appState.accounts.push(accountName);
-        }
-
-        let chest = appState.chests.find(c => c.account === accountName && c.title === chestTitle);
-        if (chest) {
-          chest.slots = slots;
-          chest.createdAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        } else {
-          appState.chests.push({
-            id: "chest-" + Date.now(),
-            account: accountName,
-            title: chestTitle,
-            createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-            slots: slots
-          });
-        }
-
-        saveState();
-        showToast(`Đã cập nhật xong [${accountName} - ${chestTitle}]!`, "success");
-      } catch (err) {
-        showToast("Lỗi: " + err.message, "error");
-      } finally {
-        badge.classList.add("hidden");
-        pendingImage = null;
-      }
-    }
-
-    function calculateSummary() {
-      const map = new Map();
-      appState.chests.forEach(chest => {
-        if (appState.selectedAccFilter !== "ALL" && chest.account !== appState.selectedAccFilter) return;
-        chest.slots.forEach(slot => {
-          const name = slot.name || "Khác";
-          const qty = parseInt(slot.qty) || 0;
-          if (!map.has(name)) {
-            map.set(name, { name, totalQty: 0, stacks: 0, foundIn: new Set(), isIgnored: appState.ignoredItems.includes(name) });
-          }
-          const item = map.get(name);
-          item.totalQty += qty;
-          item.stacks += 1;
-          item.foundIn.add(`${chest.account} (${chest.title})`);
-        });
-      });
-
-      let res = Array.from(map.values());
-      if (appState.searchQuery) {
-        res = res.filter(i => i.name.toLowerCase().includes(appState.searchQuery.toLowerCase()));
-      }
-      if (!appState.showIgnored) {
-        res = res.filter(i => !i.isIgnored);
-      }
-      res.sort((a, b) => appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty);
-      return res;
-    }
-
-    function renderAll() {
-      // Cập nhật bộ lọc Account trên thanh công cụ
-      const filterSelect = document.getElementById("filterAccountSelect");
-      const curFilter = appState.selectedAccFilter;
-      filterSelect.innerHTML = `<option value="ALL">Tất Cả Tài Khoản</option>` + 
-        appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
-      filterSelect.value = curFilter;
-
-      const summary = calculateSummary();
-      let grandTotal = 0;
-      summary.forEach(i => { if (!i.isIgnored) grandTotal += i.totalQty; });
-      document.getElementById("statAccCount").textContent = appState.accounts.length;
-      document.getElementById("statChestsCount").textContent = appState.chests.length;
-      document.getElementById("statTotalItems").textContent = grandTotal.toLocaleString('vi-VN');
-      document.getElementById("chestTabCount").textContent = appState.chests.length;
-
-      // Render bảng tổng kho
-      const tbody = document.getElementById("summaryTableBody");
-      const emptyNotice = document.getElementById("emptySummaryNotice");
-      tbody.innerHTML = "";
-
-      if (summary.length === 0) {
-        emptyNotice.classList.remove("hidden");
-      } else {
-        emptyNotice.classList.add("hidden");
-        summary.forEach((item, idx) => {
-          const tr = document.createElement("tr");
-          tr.className = `hover:bg-slate-800/40 transition border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40' : ''}`;
-          const pills = Array.from(item.foundIn).map(f => `<span class="bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 mr-1 border border-slate-700">${f}</span>`).join("");
-          tr.innerHTML = `
-            <td class="py-3 px-4 text-center font-mono text-slate-500">${idx + 1}</td>
-            <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full ${item.isIgnored ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
-              <span>${item.name}</span>
-            </td>
-            <td class="py-3 px-4 text-center"><span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">${item.stacks} ô</span></td>
-            <td class="py-3 px-4 text-center">${pills}</td>
-            <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm">${item.totalQty.toLocaleString('vi-VN')}</td>
-            <td class="py-3 px-4 text-center">
-              <button onclick="toggleIgnoreItem('${item.name}')" title="Bỏ qua / Theo dõi lại" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400">
-                <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Render tab danh sách rương
-      const container = document.getElementById("chestsContainer");
-      const emptyChest = document.getElementById("emptyChestNotice");
-      container.innerHTML = "";
-      if (appState.chests.length === 0) {
-        emptyChest.classList.remove("hidden");
-      } else {
-        emptyChest.classList.add("hidden");
-        appState.chests.forEach(chest => {
-          const card = document.createElement("div");
-          card.className = "bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3";
-          const slotsHtml = chest.slots.map((s, i) => `
-            <div class="bg-game-slot p-2 rounded-xl border border-slate-800 text-[11px] flex justify-between">
-              <span class="text-slate-300 truncate">${s.name}</span>
-              <span class="text-amber-400 font-mono font-bold">x${s.qty}</span>
-            </div>
-          `).join("");
-
-          card.innerHTML = `
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div>
-                <span class="text-emerald-400 font-bold text-xs bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded mr-1">${chest.account}</span>
-                <strong class="text-white text-sm">${chest.title}</strong>
-              </div>
-              <button onclick="removeChest('${chest.id}')" class="text-slate-500 hover:text-red-400 text-xs"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">${slotsHtml || '<p class="text-slate-600 text-xs italic">Trống</p>'}</div>
-          `;
-          container.appendChild(card);
-        });
-      }
-
-      renderDiffView();
-      lucide.createIcons();
-    }
-
-    function renderDiffView() {
-      const incList = document.getElementById("diffIncreasedList");
-      const decList = document.getElementById("diffDecreasedList");
-      if (!appState.snapshot) {
-        incList.innerHTML = `<p class="text-slate-600 italic py-3 text-center">Chưa có mốc so sánh.</p>`;
-        decList.innerHTML = `<p class="text-slate-600 italic py-3 text-center">Chưa có mốc so sánh.</p>`;
-        return;
-      }
-      const cur = {};
-      appState.chests.forEach(c => c.slots.forEach(s => cur[s.name] = (cur[s.name] || 0) + (parseInt(s.qty) || 0)));
-      const allNames = Array.from(new Set([...Object.keys(cur), ...Object.keys(appState.snapshot)]));
-      const diffs = allNames.map(name => ({ name, diff: (cur[name] || 0) - (appState.snapshot[name] || 0) }));
-
-      const inc = diffs.filter(d => d.diff > 0).sort((a,b) => b.diff - a.diff);
-      const dec = diffs.filter(d => d.diff < 0).sort((a,b) => a.diff - b.diff);
-
-      incList.innerHTML = inc.map(d => `<div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between"><span>${d.name}</span><b class="text-emerald-400 font-mono">+${d.diff.toLocaleString()}</b></div>`).join("") || '<p class="text-slate-600 italic">Không có</p>';
-      decList.innerHTML = dec.map(d => `<div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between"><span>${d.name}</span><b class="text-rose-400 font-mono">${d.diff.toLocaleString()}</b></div>`).join("") || '<p class="text-slate-600 italic">Không có</p>';
-    }
-
-    window.toggleIgnoreItem = function(name) {
-      if (appState.ignoredItems.includes(name)) {
-        appState.ignoredItems = appState.ignoredItems.filter(i => i !== name);
-      } else {
-        appState.ignoredItems.push(name);
-      }
-      saveState();
-    };
-
-    window.removeChest = function(id) {
-      if (confirm("Xoá rương này?")) {
-        appState.chests = appState.chests.filter(c => c.id !== id);
-        saveState();
-      }
-    };
-
-    // Khởi tạo các sự kiện
-    window.addEventListener("DOMContentLoaded", () => {
-      loadState();
-      updateApiKeyUI();
-
-      // Bắt sự kiện dán Ctrl + V toàn trang
-      window.addEventListener("paste", (e) => {
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf("image") !== -1) {
-            handleIncomingFile(items[i].getAsFile());
-            break;
-          }
-        }
-      });
-
-      // Chỉ khi bấm chữ 'chọn tệp' mới mở file explorer
-      const fileInput = document.getElementById("fileInput");
-      const btnBrowse = document.getElementById("btnBrowseFile");
-      const dropZone = document.getElementById("dropZone");
-
-      btnBrowse.addEventListener("click", (e) => {
-        e.stopPropagation(); // Không trigger ra khung cha
-        fileInput.click();
-      });
-
-      // Click vào khung chỉ để focus nhận Ctrl+V
-      dropZone.addEventListener("click", () => dropZone.focus());
-
-      fileInput.addEventListener("change", (e) => {
-        if (e.target.files?.[0]) handleIncomingFile(e.target.files[0]);
-        fileInput.value = "";
-      });
-
-      dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drop-active"); });
-      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drop-active"));
-      dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("drop-active");
-        if (e.dataTransfer.files?.[0]) handleIncomingFile(e.dataTransfer.files[0]);
-      });
-
-      // Nút Rương 1 2 3
-      document.querySelectorAll(".btn-chest-num").forEach(btn => {
-        btn.addEventListener("click", () => {
-          document.querySelectorAll(".btn-chest-num").forEach(b => {
-            b.classList.remove("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
-            b.classList.add("bg-slate-800", "text-slate-300");
-          });
-          btn.classList.add("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
-          btn.classList.remove("bg-slate-800", "text-slate-300");
-          selectedChestNum = btn.dataset.num;
-          document.getElementById("customChestInput").classList.add("hidden");
-        });
-      });
-
-      document.getElementById("btnCustomChestNum").addEventListener("click", () => {
-        const input = document.getElementById("customChestInput");
-        input.classList.remove("hidden");
-        input.focus();
-      });
-
-      // Bấm nút Cập Nhật Rương
-      document.getElementById("btnConfirmUpload").addEventListener("click", () => {
-        const accName = document.getElementById("inputAccountName").value.trim();
-        if (!accName) {
-          alert("Vui lòng điền tên tài khoản!");
-          document.getElementById("inputAccountName").focus();
-          return;
-        }
-
-        const customInput = document.getElementById("customChestInput");
-        let chestTitle = selectedChestNum;
-        if (!customInput.classList.contains("hidden") && customInput.value.trim()) {
-          chestTitle = customInput.value.trim();
-        }
-
-        document.getElementById("confirmUploadModal").classList.add("hidden");
-        executeUpload(accName, chestTitle);
-      });
-
-      // Đóng Popup
-      const closePopup = () => {
-        document.getElementById("confirmUploadModal").classList.add("hidden");
-        pendingImage = null;
-      };
-      document.getElementById("btnCancelUpload").addEventListener("click", closePopup);
-      document.getElementById("btnDismissUpload").addEventListener("click", closePopup);
-
-      // Tabs
-      const tabSummaryBtn = document.getElementById("tabSummaryBtn");
-      const tabChestsBtn = document.getElementById("tabChestsBtn");
-      const tabDiffBtn = document.getElementById("tabDiffBtn");
-      const tabSummaryView = document.getElementById("tabSummaryView");
-      const tabChestsView = document.getElementById("tabChestsView");
-      const tabDiffView = document.getElementById("tabDiffView");
-
-      function setTab(tab) {
-        [tabSummaryBtn, tabChestsBtn, tabDiffBtn].forEach(b => {
-          b.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap";
-        });
-        [tabSummaryView, tabChestsView, tabDiffView].forEach(v => v.classList.add("hidden"));
-
-        if (tab === "summary") {
-          tabSummaryBtn.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap";
-          tabSummaryView.classList.remove("hidden");
-        } else if (tab === "chests") {
-          tabChestsBtn.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap";
-          tabChestsView.classList.remove("hidden");
-        } else {
-          tabDiffBtn.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap";
-          tabDiffView.classList.remove("hidden");
-        }
-      }
-      tabSummaryBtn.addEventListener("click", () => setTab("summary"));
-      tabChestsBtn.addEventListener("click", () => setTab("chests"));
-      tabDiffBtn.addEventListener("click", () => setTab("diff"));
-
-      // Lọc theo Acc
-      document.getElementById("filterAccountSelect").addEventListener("change", (e) => {
-        appState.selectedAccFilter = e.target.value;
-        renderAll();
-      });
-
-      // Tìm kiếm & Filter
-      document.getElementById("searchInput").addEventListener("input", (e) => {
-        appState.searchQuery = e.target.value.trim();
-        renderAll();
-      });
-      document.getElementById("chkShowIgnored").addEventListener("change", (e) => {
-        appState.showIgnored = e.target.checked;
-        renderAll();
-      });
-
-      // Snapshot
-      document.getElementById("btnCreateSnapshot").addEventListener("click", () => {
-        const snap = {};
-        appState.chests.forEach(c => c.slots.forEach(s => snap[s.name] = (snap[s.name] || 0) + (parseInt(s.qty) || 0)));
-        appState.snapshot = snap;
-        saveState();
-        showToast("Đã lưu mốc so sánh!", "success");
-      });
-      document.getElementById("btnClearSnapshot").addEventListener("click", () => {
-        appState.snapshot = null;
-        saveState();
-        showToast("Đã xóa mốc so sánh", "info");
-      });
-
-      // Copy bảng
-      document.getElementById("btnCopyTable").addEventListener("click", () => {
-        const summary = calculateSummary();
-        let content = "Tên Vật Phẩm\tSố Ô\tTổng Số Lượng\n";
-        summary.forEach(i => content += `${i.name}\t${i.stacks}\t${i.totalQty}\n`);
-        navigator.clipboard.writeText(content);
-        showToast("Đã sao chép bảng!", "success");
-      });
-
-      // Nạp mẫu test
-      document.getElementById("btnLoadMock").addEventListener("click", () => {
-        appState.accounts = ["Nick Chinh", "Nick Phu"];
-        appState.chests = [
-          { id: "c1", account: "Nick Chinh", title: "Rương 1", slots: [{ name: "Võ sĩ yêu đái", qty: 8500 }, { name: "Quỷ Hồn", qty: 3996 }] },
-          { id: "c2", account: "Nick Chinh", title: "Rương 2", slots: [{ name: "Toái cốt", qty: 5827 }, { name: "Da hổ", qty: 5913 }] },
-          { id: "c3", account: "Nick Phu", title: "Rương 1", slots: [{ name: "Linh Cầm", qty: 8146 }, { name: "Phù ấn", qty: 3865 }] }
-        ];
-        saveState();
-        showToast("Đã nạp dữ liệu mẫu!", "success");
-      });
-
-      // Xóa tất cả
-      document.getElementById("btnResetAll").addEventListener("click", () => {
-        if (confirm("Xóa toàn bộ dữ liệu?")) {
-          localStorage.removeItem(STORAGE_KEY);
-          location.reload();
-        }
-      });
-
-      // Modal API
-      const configModal = document.getElementById("configModal");
-      document.getElementById("btnOpenConfig").addEventListener("click", () => {
-        document.getElementById("inputApiKey").value = appState.apiKey;
-        configModal.classList.remove("hidden");
-      });
-      document.getElementById("btnCloseConfig").addEventListener("click", () => configModal.classList.add("hidden"));
-      document.getElementById("btnSaveApiKey").addEventListener("click", () => {
-        const key = document.getElementById("inputApiKey").value.trim();
-        appState.apiKey = key;
-        localStorage.setItem("gemini_api_key", key);
-        configModal.classList.add("hidden");
-        updateApiKeyUI();
-        showToast(key ? "Đã lưu API Key!" : "Đã chuyển về chế độ Demo", "success");
-      });
-      document.getElementById("btnClearApiKey").addEventListener("click", () => {
-        appState.apiKey = "";
-        localStorage.removeItem("gemini_api_key");
-        configModal.classList.add("hidden");
-        updateApiKeyUI();
-        showToast("Đã xóa API Key", "info");
-      });
-
-      renderAll();
-      lucide.createIcons();
-    });
-  </script>
+  <!-- Nạp các file script -->
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
