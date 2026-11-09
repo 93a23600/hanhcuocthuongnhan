@@ -1,70 +1,86 @@
-let selectedChestNum = "Rương 1";
+let pendingImage = null;
 
-function openConfirmUploadModal() {
-  const modal = document.getElementById("confirmUploadModal");
-  const selectAcc = document.getElementById("selectAccount");
+async function analyzeChestWithGemini(base64Image) {
+  const prompt = `Trích xuất tất cả các ô vật phẩm trong rương đồ game này.
+Danh mục tên vật phẩm chuẩn: ${JSON.stringify(KNOWN_ITEMS)}.
+Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
 
-  // Render danh sách Acc hiện có
-  selectAcc.innerHTML = appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
-
-  modal.classList.remove("hidden");
-  lucide.createIcons();
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: "image/png", data: base64Image } }
+        ]
+      }],
+      generationConfig: { responseMimeType: "application/json" }
+    })
+  });
+  if (!response.ok) throw new Error("Lỗi API Gemini");
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  return JSON.parse(text);
 }
 
-// Bấm nút Rương 1, 2, 3
-document.querySelectorAll(".btn-chest-num").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".btn-chest-num").forEach(b => {
-      b.classList.remove("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
-      b.classList.add("bg-slate-800", "text-slate-300");
-    });
-    btn.classList.add("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
-    btn.classList.remove("bg-slate-800", "text-slate-300");
-    selectedChestNum = btn.dataset.num;
-    document.getElementById("customChestInput").classList.add("hidden");
-  });
-});
+function handleIncomingFile(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(",")[1];
+    pendingImage = { base64, dataUrl };
 
-// Nút chọn Rương khác (nếu không phải 1, 2, 3)
-document.getElementById("btnCustomChestNum").addEventListener("click", () => {
-  const customInput = document.getElementById("customChestInput");
-  customInput.classList.remove("hidden");
-  customInput.focus();
-});
+    document.getElementById("uploadPreviewImg").src = dataUrl;
+    openUploadModal();
+  };
+  reader.readAsDataURL(file);
+}
 
-// Thêm Acc mới nhanh
-document.getElementById("btnQuickNewAcc").addEventListener("click", () => {
-  const name = prompt("Nhập tên Tài Khoản mới (ví dụ: Acc 3, clone_nga_my...):");
-  if (name && name.trim()) {
-    if (!appState.accounts.includes(name.trim())) {
-      appState.accounts.push(name.trim());
-      savePersistedState();
+async function executeUpload(accountName, chestTitle) {
+  if (!pendingImage) return;
+  const badge = document.getElementById("readingBadge");
+  badge.classList.remove("hidden");
+  showToast(`Đang quét ảnh nạp vào [${accountName} - ${chestTitle}]...`, "info");
+
+  try {
+    let slots = [];
+    if (appState.apiKey) {
+      slots = await analyzeChestWithGemini(pendingImage.base64);
+    } else {
+      await new Promise(r => setTimeout(r, 600));
+      slots = [
+        { name: "Võ sĩ yêu đái", qty: 999 },
+        { name: "Linh Cầm", qty: 999 },
+        { name: "Quỷ Hồn", qty: 999 }
+      ];
     }
-    openConfirmUploadModal();
-    document.getElementById("selectAccount").value = name.trim();
+
+    if (!appState.accounts.includes(accountName)) {
+      appState.accounts.push(accountName);
+    }
+
+    let chest = appState.chests.find(c => c.account === accountName && c.title === chestTitle);
+    if (chest) {
+      chest.slots = slots;
+      chest.createdAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    } else {
+      appState.chests.push({
+        id: "chest-" + Date.now(),
+        account: accountName,
+        title: chestTitle,
+        createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        slots: slots
+      });
+    }
+
+    saveState();
+    showToast(`Đã cập nhật xong [${accountName} - ${chestTitle}]!`, "success");
+  } catch (err) {
+    showToast("Lỗi: " + err.message, "error");
+  } finally {
+    badge.classList.add("hidden");
+    pendingImage = null;
   }
-});
-
-// Bấm nút "Cập Nhật Rương"
-document.getElementById("btnConfirmUpload").addEventListener("click", () => {
-  const accName = document.getElementById("selectAccount").value;
-  const customInput = document.getElementById("customChestInput");
-  let chestTitle = selectedChestNum;
-
-  if (!customInput.classList.contains("hidden") && customInput.value.trim()) {
-    chestTitle = customInput.value.trim();
-  }
-
-  document.getElementById("confirmUploadModal").classList.add("hidden");
-  executeUploadToChest(accName, chestTitle);
-});
-
-// Hủy bỏ
-document.getElementById("btnCancelUpload").addEventListener("click", () => {
-  document.getElementById("confirmUploadModal").classList.add("hidden");
-  pendingImage = null;
-});
-document.getElementById("btnDismissUpload").addEventListener("click", () => {
-  document.getElementById("confirmUploadModal").classList.add("hidden");
-  pendingImage = null;
-});
+}
