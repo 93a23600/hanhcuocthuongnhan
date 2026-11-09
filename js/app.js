@@ -71,7 +71,87 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 3. Chọn Rương 1 2 3 trên Popup nạp ảnh
+  // 3. ĐIỀU KHIỂN MODAL CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 30 Ô
+  ["Top", "Bottom", "Left", "Right"].forEach(side => {
+    const range = document.getElementById(`rangeCrop${side}`);
+    if (range) {
+      range.addEventListener("input", (e) => {
+        if (typeof currentCropRatios !== "undefined") {
+          currentCropRatios[side.toLowerCase()] = parseFloat(e.target.value);
+        }
+        if (typeof updateRangeLabels === "function") updateRangeLabels();
+        if (typeof drawCalibrateGrid === "function") drawCalibrateGrid();
+      });
+    }
+  });
+
+  const btnResetCalib = document.getElementById("btnResetCalibrate");
+  if (btnResetCalib) {
+    btnResetCalib.onclick = () => {
+      if (typeof currentCropRatios !== "undefined") {
+        currentCropRatios = { top: 0, bottom: 0, left: 0, right: 0 };
+      }
+      ["Top", "Bottom", "Left", "Right"].forEach(s => {
+        const el = document.getElementById(`rangeCrop${s}`);
+        if (el) el.value = 0;
+      });
+      if (typeof updateRangeLabels === "function") updateRangeLabels();
+      if (typeof drawCalibrateGrid === "function") drawCalibrateGrid();
+    };
+  }
+
+  const btnCancelCalib = document.getElementById("btnCancelCalibrate");
+  if (btnCancelCalib) {
+    btnCancelCalib.onclick = () => {
+      const modal = document.getElementById("cropCalibrateModal");
+      if (modal) modal.classList.add("hidden");
+      if (typeof pendingRawImg !== "undefined") pendingRawImg = null;
+    };
+  }
+
+  // Bấm Xác Nhận Khung -> Tự học khung & Cắt 30 ô chuyển sang bước nạp
+  const btnConfirmCalib = document.getElementById("btnConfirmCalibrate");
+  if (btnConfirmCalib) {
+    btnConfirmCalib.onclick = () => {
+      const modal = document.getElementById("cropCalibrateModal");
+      if (modal) modal.classList.add("hidden");
+
+      if (typeof currentCropRatios !== "undefined" && typeof pendingRawImg !== "undefined" && pendingRawImg) {
+        // Lưu vĩnh viễn khung vào não bộ
+        appState.learnedGridCrop = Object.assign({}, currentCropRatios);
+        saveBrainState();
+
+        // Cắt 30 ô theo tỉ lệ đã căn
+        pendingCrops = sliceGridWithRatios(pendingRawImg, currentCropRatios);
+
+        // Tạo ảnh preview vùng đã cắt gọn
+        const cvs = document.createElement("canvas");
+        const ctx = cvs.getContext("2d");
+        const startX = (currentCropRatios.left / 100) * pendingRawImg.naturalWidth;
+        const startY = (currentCropRatios.top / 100) * pendingRawImg.naturalHeight;
+        const cropW = pendingRawImg.naturalWidth - startX - ((currentCropRatios.right / 100) * pendingRawImg.naturalWidth);
+        const cropH = pendingRawImg.naturalHeight - startY - ((currentCropRatios.bottom / 100) * pendingRawImg.naturalHeight);
+
+        cvs.width = Math.max(1, cropW);
+        cvs.height = Math.max(1, cropH);
+        ctx.drawImage(pendingRawImg, startX, startY, cropW, cropH, 0, 0, cvs.width, cvs.height);
+
+        const croppedDataUrl = cvs.toDataURL("image/png");
+        pendingImage = {
+          base64: croppedDataUrl.split(",")[1],
+          dataUrl: croppedDataUrl
+        };
+
+        const previewImg = document.getElementById("uploadPreviewImg");
+        if (previewImg) previewImg.src = croppedDataUrl;
+
+        openUploadModal();
+        showToast("Đã ghi nhớ tỷ lệ căn viền vào Bộ Não AI!", "success");
+      }
+    };
+  }
+
+  // 4. Chọn Rương 1 2 3 trên Popup nạp ảnh
   document.querySelectorAll(".btn-chest-num").forEach(btn => {
     btn.onclick = function() {
       document.querySelectorAll(".btn-chest-num").forEach(b => {
@@ -97,7 +177,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 4. Bấm "Cập Nhật Rương" trên Popup
+  // 5. Bấm "Cập Nhật Rương" trên Popup
   const btnConfirm = document.getElementById("btnConfirmUpload");
   if (btnConfirm) {
     btnConfirm.onclick = function() {
@@ -132,7 +212,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (btnCancel) btnCancel.onclick = closeUploadPopup;
   if (btnDismiss) btnDismiss.onclick = closeUploadPopup;
 
-  // 5. Gợi ý thông minh khi gõ tên vật phẩm (Custom Autocomplete)
+  // 6. Gợi ý thông minh khi gõ tên vật phẩm (Custom Autocomplete)
   const nameInput = document.getElementById("sidePanelItemName");
   const dropdown = document.getElementById("customAutocompleteList");
   if (nameInput && dropdown) {
@@ -155,7 +235,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 6. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI
+  // 7. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.onclick = async function() {
@@ -218,7 +298,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 7. Dạy AI Số Đúng
+  // 8. Dạy AI Số Đúng
   const btnTrain = document.getElementById("btnTrainAiWrongNumber");
   if (btnTrain) {
     btnTrain.onclick = function() {
@@ -249,7 +329,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 8. Làm rỗng ô
+  // 9. Làm rỗng ô
   const btnEmptySide = document.getElementById("btnSidePanelEmptySlot");
   if (btnEmptySide) {
     btnEmptySide.onclick = function() {
@@ -264,7 +344,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 9. Chuyển Acc & Rương đang xem
+  // 10. Chuyển Acc & Rương đang xem
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc) {
     selectAcc.onchange = function(e) {
@@ -286,7 +366,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  // 10. Chuyển Tab (Rương Game / Tổng Kho / Biến Động)
+  // 11. Chuyển Tab (Rương Game / Tổng Kho / Biến Động)
   const tabGameGridBtn = document.getElementById("tabGameGridBtn");
   const tabSummaryBtn = document.getElementById("tabSummaryBtn");
   const tabDiffBtn = document.getElementById("tabDiffBtn");
@@ -320,7 +400,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (tabSummaryBtn) tabSummaryBtn.onclick = () => setTab("summary");
   if (tabDiffBtn) tabDiffBtn.onclick = () => setTab("diff");
 
-  // 11. Bộ lọc Acc & Tìm kiếm
+  // 12. Bộ lọc Acc & Tìm kiếm
   const filterAcc = document.getElementById("filterAccountSelect");
   if (filterAcc) {
     filterAcc.onchange = (e) => {
@@ -337,7 +417,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 12. Snapshot
+  // 13. Snapshot
   const btnSnap = document.getElementById("btnCreateSnapshot");
   if (btnSnap) {
     btnSnap.onclick = () => {
@@ -362,7 +442,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 13. Copy Bảng
+  // 14. Copy Bảng
   const btnCopy = document.getElementById("btnCopyTable");
   if (btnCopy) {
     btnCopy.onclick = () => {
@@ -375,11 +455,11 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 14. NÚT RESET: CHỈ XÓA RƯƠNG HÀNG NGÀY, GIỮ BỘ NÃO AI HỌC MÁY
+  // 15. NÚT RESET: CHỈ XÓA RƯƠNG HÀNG NGÀY, GIỮ BỘ NÃO AI HỌC MÁY
   const btnReset = document.getElementById("btnResetAll");
   if (btnReset) {
     btnReset.onclick = function() {
-      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
+      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon, tỷ lệ căn viền và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
         localStorage.removeItem(STORAGE_CHESTS_KEY);
         appState.chests = [];
         appState.accounts = [];
@@ -389,11 +469,12 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 15. XUẤT BỘ NÃO AI RA FILE JSON VỀ MÁY TÍNH
+  // 16. XUẤT BỘ NÃO AI RA FILE JSON VỀ MÁY TÍNH
   const btnExportBrain = document.getElementById("btnExportBrain");
   if (btnExportBrain) {
     btnExportBrain.onclick = () => {
       const brainData = {
+        learnedGridCrop: appState.learnedGridCrop,
         learnedIcons: appState.learnedIcons,
         trainedNumberErrors: appState.trainedNumberErrors,
         customKnownItems: appState.customKnownItems,
@@ -407,11 +488,11 @@ window.addEventListener("DOMContentLoaded", () => {
       a.download = `bo_nao_kiem_kho_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Đã xuất file não bộ (${count} icon đã học)!`, "success");
+      showToast(`Đã xuất file não bộ (${count} icon đã học & khung viền chuẩn)!`, "success");
     };
   }
 
-  // 16. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT
+  // 17. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT
   const inputImportBrain = document.getElementById("inputImportBrain");
   if (inputImportBrain) {
     inputImportBrain.onchange = (e) => {
@@ -423,6 +504,7 @@ window.addEventListener("DOMContentLoaded", () => {
         try {
           const imported = JSON.parse(event.target.result);
           if (imported.learnedIcons) {
+            appState.learnedGridCrop = imported.learnedGridCrop || appState.learnedGridCrop;
             appState.learnedIcons = Object.assign({}, appState.learnedIcons, imported.learnedIcons);
             appState.trainedNumberErrors = (appState.trainedNumberErrors || []).concat(imported.trainedNumberErrors || []);
             appState.customKnownItems = Array.from(new Set([...(appState.customKnownItems || []), ...(imported.customKnownItems || [])]));
@@ -442,7 +524,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 17. Modal API Key
+  // 18. Modal API Key
   const configModal = document.getElementById("configModal");
   const inputApiKey = document.getElementById("inputApiKey");
   const btnOpenCfg = document.getElementById("btnOpenConfig");
