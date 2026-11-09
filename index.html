@@ -39,9 +39,9 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-lg font-bold text-white">Kiểm Kho Game AI</h1>
-            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Lưới 30 Ô Game</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Lưới 35 Ô (5×7)</span>
           </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Chụp màn hình rương &bull; Bấm Ctrl+V &bull; Tự cắt icon &bull; Nhấp ô để sửa</p>
+          <p class="text-xs text-slate-400 hidden sm:block">Chụp màn hình rương &bull; Bấm Ctrl+V &bull; Căn khung 35 ô &bull; Nhấp ô để sửa</p>
         </div>
       </div>
 
@@ -86,7 +86,7 @@
           <h3 class="font-semibold text-white text-base">
             Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> dán ảnh rương (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
           </h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-md">Canvas sẽ tự động phân tách 30 ô, crop icon sắc nét và tạo giao diện rương chuẩn game.</p>
+          <p class="text-xs text-slate-400 mt-1 max-w-md">Canvas sẽ căn chỉnh 35 ô (5×7), crop icon sắc nét và tạo giao diện rương chuẩn game.</p>
           <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
             <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Tự cắt Icon từng ô</span>
             <span id="readingBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold animate-pulse">
@@ -118,7 +118,7 @@
         <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
           <button id="tabGameGridBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
             <i data-lucide="layout-grid" class="w-4 h-4 text-amber-300"></i>
-            <span>Rương Game Thực Tế (5x6)</span>
+            <span>Rương Game Thực Tế (5×7)</span>
           </button>
           <button id="tabSummaryBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
             <i data-lucide="boxes" class="w-4 h-4"></i>
@@ -164,16 +164,16 @@
         <!-- Khung Flexbox CỐ ĐỊNH HÀNG NGANG (Không bị rớt xuống dưới khi co 1/2 màn hình) -->
         <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
           
-          <!-- Cột Trái: Rương 5x6 chuẩn gọn -->
+          <!-- Cột Trái: Rương 5x7 chuẩn gọn -->
           <div class="w-[300px] sm:w-[340px] shrink-0">
             <div class="game-chest-window p-2.5 rounded-xl border-2 border-[#1e2e3d] shadow-2xl bg-[#0c131a]">
               <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#1f2d3a] px-1 text-xs">
                 <span id="currentChestLabel" class="font-bold text-amber-400 tracking-wide text-[11px] sm:text-xs">Rương Chứa Đồ</span>
-                <span id="currentChestSlotCount" class="text-slate-400 font-mono text-[10px] sm:text-[11px]">0/30 ô</span>
+                <span id="currentChestSlotCount" class="text-slate-400 font-mono text-[10px] sm:text-[11px]">0/35 ô</span>
               </div>
               
               <div id="gameGridSlotsContainer" class="grid grid-cols-5 gap-1.5 p-1 bg-[#070b0e] rounded-lg border border-[#16222c]">
-                <!-- 30 ô rương -->
+                <!-- 35 ô rương (5 cột x 7 hàng) -->
               </div>
             </div>
           </div>
@@ -202,7 +202,7 @@
 
             <!-- Form cập nhật -->
             <div class="space-y-2.5 text-xs">
-              <!-- Ô tìm kiếm & gợi ý thông minh (Thay thế datalist cũ) -->
+              <!-- Ô tìm kiếm & gợi ý thông minh -->
               <div class="relative">
                 <label class="text-slate-300 font-bold block mb-1 text-[11px]">Tên Vật Phẩm Chuẩn:</label>
                 <input type="text" id="sidePanelItemName" autocomplete="off" placeholder="Gõ để tìm hoặc thêm tên mới..." class="w-full bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold text-xs">
@@ -300,6 +300,56 @@
     </section>
   </main>
 
+  <!-- MODAL: BƯỚC CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 35 Ô (5×7) -->
+  <div id="cropCalibrateModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-[#121922] border border-slate-700 w-full max-w-xl rounded-2xl p-4 shadow-2xl flex flex-col max-h-[95vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="scan" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="text-sm font-bold text-white">Căn Chỉnh Khung Rương 35 Ô (5×7)</h3>
+        </div>
+        <span class="text-[11px] text-amber-400 font-semibold italic">Hệ thống sẽ tự nhớ khung này cho các lần sau</span>
+      </div>
+
+      <!-- Khung Canvas hiển thị ảnh + lưới canh chỉnh -->
+      <div class="flex-1 overflow-auto flex items-center justify-center bg-[#070b0e] rounded-xl border border-slate-800 p-2 min-h-[300px]">
+        <canvas id="calibrateCanvas" class="max-w-full max-h-[55vh] object-contain cursor-crosshair rounded"></canvas>
+      </div>
+
+      <!-- 4 Thanh trượt chỉnh 4 cạnh (Top, Bottom, Left, Right) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-xs">
+        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Trên:</span><b id="valCropTop" class="text-emerald-400 font-mono">0%</b></div>
+          <input type="range" id="rangeCropTop" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
+        </div>
+        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Dưới:</span><b id="valCropBottom" class="text-emerald-400 font-mono">0%</b></div>
+          <input type="range" id="rangeCropBottom" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
+        </div>
+        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Trái:</span><b id="valCropLeft" class="text-emerald-400 font-mono">0%</b></div>
+          <input type="range" id="rangeCropLeft" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
+        </div>
+        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Phải:</span><b id="valCropRight" class="text-emerald-400 font-mono">0%</b></div>
+          <input type="range" id="rangeCropRight" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Nút hành động -->
+      <div class="pt-3 mt-2 border-t border-slate-800 flex justify-between items-center gap-2">
+        <button id="btnResetCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg">Đặt lại viền 0%</button>
+        <div class="flex gap-2">
+          <button id="btnCancelCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-lg">Hủy</button>
+          <button id="btnConfirmCalibrate" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Khung Đã Chuẩn &rarr; Tiếp Tục</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL POPUP: NHẬP TÊN ACC & CHỌN RƯƠNG KHI DÁN ẢNH -->
   <div id="confirmUploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
@@ -311,7 +361,7 @@
         <img id="uploadPreviewImg" src="" class="w-16 h-16 object-cover rounded-lg border border-slate-700 bg-slate-900">
         <div class="text-xs text-slate-400">
           <span class="text-slate-200 font-semibold block">Đã nhận ảnh rương đồ</span>
-          <span>Hệ thống đã tự động cắt 30 ô. Chọn Acc & Rương để nạp.</span>
+          <span>Hệ thống đã tự động cắt 35 ô. Chọn Acc & Rương để nạp.</span>
         </div>
       </div>
       <div class="space-y-3 text-xs">
@@ -357,60 +407,11 @@
 
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Nạp scripts đúng thứ tự phụ thuộc -->
+  <!-- Nạp scripts đúng thứ tự phụ thuộc (Đặt cuối trang trước thẻ đóng body) -->
   <script src="js/data.js"></script>
   <script src="js/state.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
-  <!-- MODAL: BƯỚC CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 30 Ô -->
-  <div id="cropCalibrateModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-[#121922] border border-slate-700 w-full max-w-xl rounded-2xl p-4 shadow-2xl flex flex-col max-h-[95vh]">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-        <div class="flex items-center gap-2">
-          <i data-lucide="scan" class="w-4 h-4 text-emerald-400"></i>
-          <h3 class="text-sm font-bold text-white">Căn Chỉnh Khung Rương 30 Ô</h3>
-        </div>
-        <span class="text-[11px] text-amber-400 font-semibold italic">Hệ thống sẽ tự nhớ khung này cho các lần sau</span>
-      </div>
-
-      <!-- Khung Canvas hiển thị ảnh + lưới canh chỉnh -->
-      <div class="flex-1 overflow-auto flex items-center justify-center bg-[#070b0e] rounded-xl border border-slate-800 p-2 min-h-[300px]">
-        <canvas id="calibrateCanvas" class="max-w-full max-h-[55vh] object-contain cursor-crosshair rounded"></canvas>
-      </div>
-
-      <!-- 4 Thanh trượt chỉnh 4 cạnh (Top, Bottom, Left, Right) -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-xs">
-        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Trên:</span><b id="valCropTop" class="text-emerald-400 font-mono">0%</b></div>
-          <input type="range" id="rangeCropTop" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
-        </div>
-        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Dưới:</span><b id="valCropBottom" class="text-emerald-400 font-mono">0%</b></div>
-          <input type="range" id="rangeCropBottom" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
-        </div>
-        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Trái:</span><b id="valCropLeft" class="text-emerald-400 font-mono">0%</b></div>
-          <input type="range" id="rangeCropLeft" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
-        </div>
-        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
-          <div class="flex justify-between text-[11px] text-slate-400 mb-1"><span>Lề Phải:</span><b id="valCropRight" class="text-emerald-400 font-mono">0%</b></div>
-          <input type="range" id="rangeCropRight" min="0" max="30" value="0" step="0.5" class="w-full accent-emerald-500 cursor-pointer">
-        </div>
-      </div>
-
-      <!-- Nút hành động -->
-      <div class="pt-3 mt-2 border-t border-slate-800 flex justify-between items-center gap-2">
-        <button id="btnResetCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg">Đặt lại viền 0%</button>
-        <div class="flex gap-2">
-          <button id="btnCancelCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-lg">Hủy</button>
-          <button id="btnConfirmCalibrate" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Khung Đã Chuẩn &rarr; Tiếp Tục</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
