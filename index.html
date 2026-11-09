@@ -130,12 +130,12 @@
         </div>
       </div>
 
-      <!-- TAB 1: RƯƠNG MÔ PHỎNG GAME (GRID 5x6 GIỐNG HỆT GAME) -->
+     <!-- TAB 1: RƯƠNG MÔ PHỎNG GAME (BÊN TRÁI: RƯƠNG, BÊN PHẢI: BẢNG BẮT LỖI) -->
       <div id="tabGameGridView" class="space-y-4">
-        <!-- Thanh chọn Acc & Rương để hiển thị -->
+        <!-- Thanh chọn Acc & Rương -->
         <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-3 rounded-xl text-xs">
           <div class="flex items-center gap-2">
-            <span class="text-slate-400 font-semibold">Đang xem:</span>
+            <span class="text-slate-400 font-semibold">Tài khoản:</span>
             <select id="selectViewingAcc" class="bg-slate-950 border border-slate-700 px-3 py-1.5 rounded-lg text-emerald-400 font-bold focus:outline-none"></select>
             <div class="flex gap-1" id="viewingChestBtns">
               <button class="btn-view-chest px-3 py-1.5 rounded-lg border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold" data-title="Rương 1">Rương 1</button>
@@ -143,23 +143,90 @@
               <button class="btn-view-chest px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold" data-title="Rương 3">Rương 3</button>
             </div>
           </div>
-          <span class="text-slate-500 italic flex items-center gap-1">
-            <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-amber-400"></i> Click vào ô để xem ảnh lớn hoặc sửa tên / số lượng nếu AI đọc sai.
-          </span>
+          <span class="text-slate-400 text-[11px] italic">Bấm ô nào trên rương, thông tin ô đó sẽ hiện ngay ở khung bên phải.</span>
         </div>
 
-        <!-- Khung rương game 5 cột x 6 hàng -->
-        <div class="flex justify-center items-center py-4">
-          <div class="game-chest-window p-3 rounded-xl border-2 border-[#1e2e3d] shadow-2xl bg-[#0c131a] max-w-[420px] w-full">
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#1f2d3a] px-1 text-xs">
-              <span id="currentChestLabel" class="font-bold text-amber-400 tracking-wide">Rương Chứa Đồ</span>
-              <span id="currentChestSlotCount" class="text-slate-400 font-mono text-[11px]">0/30 ô</span>
-            </div>
-            
-            <div id="gameGridSlotsContainer" class="grid grid-cols-5 gap-1.5 p-1 bg-[#070b0e] rounded-lg border border-[#16222c]">
-              <!-- 30 ô rương sẽ được render ở đây -->
+        <!-- Bố cục 2 Cột: Rương (Trái) - Panel Chỉnh Sửa & Huấn Luyện (Phải) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          <!-- Cột Trái (7 phần): Rương 5x6 -->
+          <div class="lg:col-span-7 flex justify-center">
+            <div class="game-chest-window p-3.5 rounded-2xl border-2 border-[#1e2e3d] shadow-2xl bg-[#0c131a] w-full max-w-[440px]">
+              <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#1f2d3a] px-1 text-xs">
+                <span id="currentChestLabel" class="font-bold text-amber-400 tracking-wide">Rương Chứa Đồ</span>
+                <span id="currentChestSlotCount" class="text-slate-400 font-mono text-[11px]">0/30 ô</span>
+              </div>
+              
+              <div id="gameGridSlotsContainer" class="grid grid-cols-5 gap-2 p-1.5 bg-[#070b0e] rounded-xl border border-[#16222c]">
+                <!-- 30 ô rương -->
+              </div>
             </div>
           </div>
+
+          <!-- Cột Phải (5 phần): Bảng Thông Tin Kế Bên (Không hiện Popup nữa) -->
+          <div class="lg:col-span-5 bg-game-card border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="scan-eye" class="w-4 h-4 text-emerald-400"></i>
+                <span id="sidePanelTitle">Thông Tin Ô Đang Chọn</span>
+              </h3>
+              <span id="sidePanelSlotIndexBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300">Ô --</span>
+            </div>
+
+            <!-- Xem trước ảnh cắt thực tế -->
+            <div class="flex items-center gap-3.5 p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <div class="w-16 h-16 bg-[#0a0f14] border border-slate-700 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                <img id="sidePanelCropImg" src="" class="w-full h-full object-contain hidden">
+                <span id="sidePanelEmptyIcon" class="text-slate-600 text-xs italic">Trống</span>
+              </div>
+              <div class="text-xs text-slate-400">
+                <span class="text-slate-200 font-semibold block">Icon thực tế cắt từ ô rương</span>
+                <span class="text-[11px]">Nếu đổi tên tại đây, hệ thống sẽ lưu vĩnh viễn hình dạng này để tự nhận diện ở mọi acc khác.</span>
+              </div>
+            </div>
+
+            <!-- Form sửa & Học dữ liệu -->
+            <div class="space-y-3.5 text-xs">
+              <div>
+                <label class="text-slate-300 font-bold block mb-1">Tên Vật Phẩm Chuẩn:</label>
+                <input type="text" id="sidePanelItemName" list="knownItemsDatalist" placeholder="Nhập tên vật phẩm..." class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold">
+                <datalist id="knownItemsDatalist"></datalist>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-slate-300 font-bold">Số Lượng Thực Tế:</label>
+                  <span id="sidePanelAiDetectedNotice" class="text-[10px] text-amber-400 font-mono"></span>
+                </div>
+                <input type="number" id="sidePanelItemQty" min="0" max="999999" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-amber-300 focus:outline-none focus:border-emerald-500 font-mono font-bold text-sm">
+              </div>
+
+              <!-- Nút Lưu & Nút Báo AI Quét Sai Số -->
+              <div class="pt-2 flex flex-col gap-2">
+                <button type="button" id="btnSaveSidePanel" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-900/30">
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <span>Lưu Thay Đổi Ô Này</span>
+                </button>
+
+                <div class="flex items-center gap-2">
+                  <button type="button" id="btnTrainAiWrongNumber" class="flex-1 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition text-[11px]" title="Ghi nhận lỗi này để AI lần sau không đọc nhầm số này nữa">
+                    <i data-lucide="brain-circuit" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Báo AI Học Lại Số Này</span>
+                  </button>
+                  <button type="button" id="btnSidePanelEmptySlot" class="px-3 py-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 rounded-xl font-semibold text-[11px]">
+                    Làm Rỗng
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thống kê bộ nhớ học máy cục bộ -->
+            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+              <span>Đã nhớ icon: <b id="statLearnedIcons" class="text-emerald-400">0</b> món</span>
+              <span>Mẫu số đã dạy AI: <b id="statTrainedSamples" class="text-amber-400">0</b></span>
+            </div>
+          </div>
+
         </div>
       </div>
 
