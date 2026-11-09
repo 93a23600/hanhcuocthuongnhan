@@ -41,16 +41,32 @@
             <h1 class="text-lg font-bold text-white">Kiểm Kho Game AI</h1>
             <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Lưới 30 Ô Game</span>
           </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Chụp màn hình rương &bull; Bấm Ctrl+V &bull; Tự cắt icon &bull; Bấm vào từng ô để bắt lỗi</p>
+          <p class="text-xs text-slate-400 hidden sm:block">Chụp màn hình rương &bull; Bấm Ctrl+V &bull; Tự cắt icon &bull; Nhấp ô để sửa</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2.5">
-        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+      <div class="flex items-center gap-2">
+        <!-- Nút Xuất file não bộ AI -->
+        <button id="btnExportBrain" title="Tải file dữ liệu icon đã học về máy tính" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Xuất Não AI</span>
+        </button>
+
+        <!-- Nút Nạp file não bộ AI từ máy tính -->
+        <label title="Nạp file não từ máy tính vào" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer transition">
+          <i data-lucide="upload" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span class="hidden sm:inline">Nạp Não AI</span>
+          <input type="file" id="inputImportBrain" accept=".json" class="hidden" />
+        </label>
+
+        <!-- Nút cài đặt API -->
+        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
           <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
           <span id="apiKeyLabel">Cài đặt API</span>
         </button>
-        <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700">
+
+        <!-- Nút Reset chỉ xóa rương, giữ nguyên não bộ -->
+        <button id="btnResetAll" title="Chỉ xóa dữ liệu rương tạm, giữ nguyên não bộ" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </div>
@@ -100,7 +116,6 @@
     <section class="space-y-4">
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
-          <!-- TAB MÔ PHỎNG GAME ĐẶT LÊN ĐẦU TIÊN -->
           <button id="tabGameGridBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
             <i data-lucide="layout-grid" class="w-4 h-4 text-amber-300"></i>
             <span>Rương Game Thực Tế (5x6)</span>
@@ -130,7 +145,7 @@
         </div>
       </div>
 
-    <!-- TAB 1: RƯƠNG MÔ PHỎNG GAME (TỐI ƯU CỐ ĐỊNH 1/2 MÀN HÌNH) -->
+      <!-- TAB 1: RƯƠNG MÔ PHỎNG GAME (TỐI ƯU CỐ ĐỊNH 1/2 MÀN HÌNH) -->
       <div id="tabGameGridView" class="space-y-3">
         <!-- Thanh chọn Acc & Rương -->
         <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl text-xs">
@@ -146,7 +161,7 @@
           <span class="text-slate-400 text-[11px] italic hidden sm:inline">Nhấp ô để sửa. Đổi tên 1 ô sẽ tự đổi toàn bộ các ô cùng icon.</span>
         </div>
 
-        <!-- Khung Flexbox CỐ ĐỊNH HÀNG NGANG (Không bao giờ bị đẩy xuống dưới) -->
+        <!-- Khung Flexbox CỐ ĐỊNH HÀNG NGANG (Không bị rớt xuống dưới khi co 1/2 màn hình) -->
         <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
           
           <!-- Cột Trái: Rương 5x6 chuẩn gọn -->
@@ -281,46 +296,6 @@
     </section>
   </main>
 
-  <!-- MODAL: BẮT LỖI & SỬA Ô VẬT PHẨM (CLICK TRÊN RƯƠNG) -->
-  <div id="editSlotModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
-          <span>Kiểm Tra & Chỉnh Sửa Ô Đồ</span>
-        </h3>
-        <button id="btnCloseEditSlot" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-
-      <div class="flex items-center gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800">
-        <div class="w-16 h-16 bg-[#0a0f14] border border-slate-700 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
-          <img id="editSlotCropImg" src="" class="w-full h-full object-contain">
-        </div>
-        <div class="text-xs text-slate-400">
-          <span class="text-slate-200 font-semibold block">Ảnh cắt thực tế từ ô</span>
-          <span>Nếu AI đọc sai tên hoặc số lượng, bạn sửa ngay tại đây.</span>
-        </div>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="text-slate-300 font-bold block mb-1">Tên vật phẩm:</label>
-          <input type="text" id="editSlotItemName" list="knownItemsDatalist" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold">
-          <datalist id="knownItemsDatalist"></datalist>
-        </div>
-        <div>
-          <label class="text-slate-300 font-bold block mb-1">Số lượng:</label>
-          <input type="number" id="editSlotItemQty" min="0" max="999999" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-amber-300 focus:outline-none focus:border-emerald-500 font-mono font-bold">
-        </div>
-      </div>
-
-      <div class="pt-2 flex justify-between gap-2 border-t border-slate-800">
-        <button id="btnEmptySlot" class="px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-950/40 rounded-xl font-medium">Làm Rỗng Ô Này</button>
-        <button id="btnSaveSlotChanges" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Lưu Thay Đổi</button>
-      </div>
-    </div>
-  </div>
-
   <!-- MODAL POPUP: NHẬP TÊN ACC & CHỌN RƯƠNG KHI DÁN ẢNH -->
   <div id="confirmUploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
@@ -378,11 +353,11 @@
 
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Nạp scripts -->
+  <!-- Nạp scripts đúng thứ tự phụ thuộc -->
   <script src="js/data.js"></script>
   <script src="js/state.js"></script>
-  <script src="js/api.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/api.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
