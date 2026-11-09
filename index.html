@@ -67,7 +67,7 @@
             <h1 class="text-lg font-bold tracking-tight text-white">Kiểm Kho Game AI</h1>
             <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Vision Auditor</span>
           </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Dán (Ctrl+V) &bull; Chọn Acc &bull; Cập nhật rương 1 2 3</p>
+          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Dán (Ctrl+V) &bull; Nhập tên Acc &bull; Cập nhật rương 1 2 3</p>
         </div>
       </div>
 
@@ -94,15 +94,17 @@
       <div class="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="flex flex-col md:flex-row gap-5 items-stretch">
-        <!-- Vùng dán ảnh -->
-        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition group focus:outline-none focus:border-emerald-500">
+        <!-- Vùng dán ảnh: Click vào để focus dán Ctrl+V thoải mái, chỉ click đúng chữ 'chọn tệp' mới mở file explorer -->
+        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-default transition group focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50">
           <input type="file" id="fileInput" accept="image/*" class="hidden" />
           <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
             <i data-lucide="image-plus" class="w-7 h-7"></i>
           </div>
-          <h3 class="font-semibold text-white text-base">Thả ảnh rương vào đây hoặc <span class="text-emerald-400 underline underline-offset-2">chọn tệp</span></h3>
+          <h3 class="font-semibold text-white text-base">
+            Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> để dán ảnh (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline underline-offset-2 hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
+          </h3>
           <p class="text-xs text-slate-400 mt-1 max-w-md">
-            Chụp ảnh rương trong game và bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-mono">Ctrl + V</kbd> &rarr; Hiện bảng chọn Acc & Rương để nạp!
+            Hỗ trợ kéo thả ảnh vào khung hoặc bấm Ctrl + V ở bất kỳ đâu trên màn hình.
           </p>
           <div class="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] text-slate-400">
             <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Tự động nhận diện lưới 30 ô</span>
@@ -261,7 +263,7 @@
     </section>
   </main>
 
-  <!-- MODAL XÁC NHẬN NẠP ẢNH: CHỌN ACC & RƯƠNG (POPUP CHÍNH) -->
+  <!-- MODAL XÁC NHẬN NẠP ẢNH: NHẬP TÊN ACC & CHỌN RƯƠNG -->
   <div id="confirmUploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -276,19 +278,18 @@
         <img id="uploadPreviewImg" src="" class="w-16 h-16 object-cover rounded-lg border border-slate-700 bg-slate-900">
         <div class="text-xs text-slate-400">
           <span class="text-slate-200 font-semibold block">Đã nhận ảnh rương đồ</span>
-          <span>Chọn tài khoản và rương cần ghi đè dữ liệu.</span>
+          <span>Điền tên tài khoản và chọn rương tương ứng.</span>
         </div>
       </div>
 
       <div class="space-y-3 text-xs">
         <div>
-          <label class="text-slate-300 font-bold block mb-1">1. Chọn Tài Khoản (Acc):</label>
-          <div class="flex gap-2">
-            <select id="selectAccount" class="flex-1 bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold"></select>
-            <button id="btnQuickNewAcc" title="Thêm tài khoản mới" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 font-semibold flex items-center gap-1">
-              <i data-lucide="user-plus" class="w-4 h-4"></i> <span>Tạo Acc</span>
-            </button>
+          <label class="text-slate-300 font-bold block mb-1">1. Tên Tài Khoản (Acc):</label>
+          <div class="relative">
+            <input type="text" id="inputAccountName" list="accountSuggestions" placeholder="Nhập tên tài khoản (VD: Main, Clone 01, Nick Cam...)" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-semibold">
+            <datalist id="accountSuggestions"></datalist>
           </div>
+          <p class="text-[11px] text-slate-500 mt-1 italic">Bạn có thể gõ bất kỳ tên gì, hệ thống sẽ tự nhớ để gợi ý lần sau.</p>
         </div>
 
         <div>
@@ -341,7 +342,7 @@
 
   <!-- SCRIPT LOGIC HOÀN CHỈNH -->
   <script>
-    const STORAGE_KEY = "HKTN_INVENTORY_DATA_MULTI_ACC";
+    const STORAGE_KEY = "HKTN_INVENTORY_DATA_MULTI_ACC_V2";
     const KNOWN_ITEMS = [
       "Võ sĩ yêu đái", "Quỷ Hồn", "Linh Tán", "Thiết bát quái", "Linh Cầm",
       "Cánh dơi", "Vòng Bạch Ngọc", "Canh Mộc Bài", "Mặt nạ Võ sĩ", "Bùa vàng",
@@ -353,8 +354,8 @@
 
     let appState = {
       apiKey: localStorage.getItem("gemini_api_key") || "",
-      accounts: ["Acc 1", "Acc 2"],
-      chests: [], // Cấu trúc: { id, account, title: "Rương 1", slots: [{name, qty}] }
+      accounts: [], // Lưu các tên account người dùng đã từng gõ
+      chests: [], // { id, account, title: "Rương 1", slots: [{name, qty}] }
       ignoredItems: [],
       snapshot: null,
       searchQuery: "",
@@ -373,7 +374,7 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          appState.accounts = parsed.accounts || ["Acc 1", "Acc 2"];
+          appState.accounts = parsed.accounts || [];
           appState.chests = parsed.chests || [];
           appState.ignoredItems = parsed.ignoredItems || [];
           appState.snapshot = parsed.snapshot || null;
@@ -423,7 +424,7 @@
       }
     }
 
-    // Xử lý AI Vision
+    // AI Vision
     async function analyzeChestWithGemini(base64Image) {
       const prompt = `Trích xuất tất cả các ô vật phẩm trong rương đồ game này.
 Danh mục tên vật phẩm chuẩn: ${JSON.stringify(KNOWN_ITEMS)}.
@@ -448,7 +449,6 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
       return JSON.parse(text);
     }
 
-    // Nhận ảnh từ Clipboard hoặc Kéo Thả -> MỞ POPUP XÁC NHẬN
     function handleIncomingFile(file) {
       if (!file || !file.type.startsWith("image/")) return;
       const reader = new FileReader();
@@ -464,9 +464,18 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
     }
 
     function openUploadModal() {
-      const selectAcc = document.getElementById("selectAccount");
-      selectAcc.innerHTML = appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
+      // Cập nhật danh sách gợi ý tài khoản đã có
+      const dl = document.getElementById("accountSuggestions");
+      dl.innerHTML = appState.accounts.map(acc => `<option value="${acc}"></option>`).join("");
+      
+      const accInput = document.getElementById("inputAccountName");
+      // Mặc định điền acc gần nhất nếu có
+      if (!accInput.value.trim() && appState.accounts.length > 0) {
+        accInput.value = appState.accounts[appState.accounts.length - 1];
+      }
+
       document.getElementById("confirmUploadModal").classList.remove("hidden");
+      accInput.focus();
       lucide.createIcons();
     }
 
@@ -488,6 +497,11 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
             { name: "Quỷ Hồn", qty: 999 },
             { name: "Toái cốt", qty: 500 }
           ];
+        }
+
+        // Lưu account vào danh sách nếu chưa có
+        if (!appState.accounts.includes(accountName)) {
+          appState.accounts.push(accountName);
         }
 
         let chest = appState.chests.find(c => c.account === accountName && c.title === chestTitle);
@@ -514,7 +528,6 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
       }
     }
 
-    // Tính toán tồn kho
     function calculateSummary() {
       const map = new Map();
       appState.chests.forEach(chest => {
@@ -544,14 +557,13 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
     }
 
     function renderAll() {
-      // Cập nhật bộ lọc Account ở thanh công cụ
+      // Cập nhật bộ lọc Account trên thanh công cụ
       const filterSelect = document.getElementById("filterAccountSelect");
       const curFilter = appState.selectedAccFilter;
       filterSelect.innerHTML = `<option value="ALL">Tất Cả Tài Khoản</option>` + 
         appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
       filterSelect.value = curFilter;
 
-      // Stats
       const summary = calculateSummary();
       let grandTotal = 0;
       summary.forEach(i => { if (!i.isIgnored) grandTotal += i.totalQty; });
@@ -664,12 +676,12 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
       }
     };
 
-    // Sự kiện khởi chạy
+    // Khởi tạo các sự kiện
     window.addEventListener("DOMContentLoaded", () => {
       loadState();
       updateApiKeyUI();
 
-      // Paste Listener (Ctrl+V)
+      // Bắt sự kiện dán Ctrl + V toàn trang
       window.addEventListener("paste", (e) => {
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -681,20 +693,33 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
         }
       });
 
-      // Kéo thả ảnh
-      const dropZone = document.getElementById("dropZone");
+      // Chỉ khi bấm chữ 'chọn tệp' mới mở file explorer
       const fileInput = document.getElementById("fileInput");
-      dropZone.addEventListener("click", () => fileInput.click());
-      fileInput.addEventListener("change", (e) => handleIncomingFile(e.target.files[0]));
+      const btnBrowse = document.getElementById("btnBrowseFile");
+      const dropZone = document.getElementById("dropZone");
+
+      btnBrowse.addEventListener("click", (e) => {
+        e.stopPropagation(); // Không trigger ra khung cha
+        fileInput.click();
+      });
+
+      // Click vào khung chỉ để focus nhận Ctrl+V
+      dropZone.addEventListener("click", () => dropZone.focus());
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files?.[0]) handleIncomingFile(e.target.files[0]);
+        fileInput.value = "";
+      });
+
       dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drop-active"); });
       dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drop-active"));
       dropZone.addEventListener("drop", (e) => {
         e.preventDefault();
         dropZone.classList.remove("drop-active");
-        handleIncomingFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files?.[0]) handleIncomingFile(e.dataTransfer.files[0]);
       });
 
-      // Chọn nút Rương 1 2 3 trên Popup
+      // Nút Rương 1 2 3
       document.querySelectorAll(".btn-chest-num").forEach(btn => {
         btn.addEventListener("click", () => {
           document.querySelectorAll(".btn-chest-num").forEach(b => {
@@ -714,32 +739,26 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
         input.focus();
       });
 
-      // Thêm Acc mới nhanh
-      document.getElementById("btnQuickNewAcc").addEventListener("click", () => {
-        const name = prompt("Nhập tên Tài Khoản (Acc) mới:");
-        if (name && name.trim()) {
-          if (!appState.accounts.includes(name.trim())) {
-            appState.accounts.push(name.trim());
-            saveState();
-          }
-          openUploadModal();
-          document.getElementById("selectAccount").value = name.trim();
-        }
-      });
-
-      // Bấm nút "Cập Nhật Rương"
+      // Bấm nút Cập Nhật Rương
       document.getElementById("btnConfirmUpload").addEventListener("click", () => {
-        const acc = document.getElementById("selectAccount").value;
+        const accName = document.getElementById("inputAccountName").value.trim();
+        if (!accName) {
+          alert("Vui lòng điền tên tài khoản!");
+          document.getElementById("inputAccountName").focus();
+          return;
+        }
+
         const customInput = document.getElementById("customChestInput");
         let chestTitle = selectedChestNum;
         if (!customInput.classList.contains("hidden") && customInput.value.trim()) {
           chestTitle = customInput.value.trim();
         }
+
         document.getElementById("confirmUploadModal").classList.add("hidden");
-        executeUpload(acc, chestTitle);
+        executeUpload(accName, chestTitle);
       });
 
-      // Hủy Popup
+      // Đóng Popup
       const closePopup = () => {
         document.getElementById("confirmUploadModal").classList.add("hidden");
         pendingImage = null;
@@ -747,7 +766,7 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
       document.getElementById("btnCancelUpload").addEventListener("click", closePopup);
       document.getElementById("btnDismissUpload").addEventListener("click", closePopup);
 
-      // Chuyển Tab
+      // Tabs
       const tabSummaryBtn = document.getElementById("tabSummaryBtn");
       const tabChestsBtn = document.getElementById("tabChestsBtn");
       const tabDiffBtn = document.getElementById("tabDiffBtn");
@@ -817,10 +836,11 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
 
       // Nạp mẫu test
       document.getElementById("btnLoadMock").addEventListener("click", () => {
+        appState.accounts = ["Nick Chinh", "Nick Phu"];
         appState.chests = [
-          { id: "c1", account: "Acc 1", title: "Rương 1", slots: [{ name: "Võ sĩ yêu đái", qty: 8500 }, { name: "Quỷ Hồn", qty: 3996 }] },
-          { id: "c2", account: "Acc 1", title: "Rương 2", slots: [{ name: "Toái cốt", qty: 5827 }, { name: "Da hổ", qty: 5913 }] },
-          { id: "c3", account: "Acc 2", title: "Rương 1", slots: [{ name: "Linh Cầm", qty: 8146 }, { name: "Phù ấn", qty: 3865 }] }
+          { id: "c1", account: "Nick Chinh", title: "Rương 1", slots: [{ name: "Võ sĩ yêu đái", qty: 8500 }, { name: "Quỷ Hồn", qty: 3996 }] },
+          { id: "c2", account: "Nick Chinh", title: "Rương 2", slots: [{ name: "Toái cốt", qty: 5827 }, { name: "Da hổ", qty: 5913 }] },
+          { id: "c3", account: "Nick Phu", title: "Rương 1", slots: [{ name: "Linh Cầm", qty: 8146 }, { name: "Phù ấn", qty: 3865 }] }
         ];
         saveState();
         showToast("Đã nạp dữ liệu mẫu!", "success");
@@ -847,7 +867,7 @@ Chỉ trả về JSON Array: [{"name": "Tên", "qty": 999}]`;
         localStorage.setItem("gemini_api_key", key);
         configModal.classList.add("hidden");
         updateApiKeyUI();
-        showToast("Đã lưu API Key!", "success");
+        showToast(key ? "Đã lưu API Key!" : "Đã chuyển về chế độ Demo", "success");
       });
       document.getElementById("btnClearApiKey").addEventListener("click", () => {
         appState.apiKey = "";
