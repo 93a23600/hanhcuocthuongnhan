@@ -124,9 +124,10 @@ window.addEventListener("DOMContentLoaded", () => {
   if (btnDismiss) btnDismiss.addEventListener("click", closeUploadPopup);
 
   // 5. Lưu Thay Đổi Ô Bên Panel Phải
+  // Lưu Thay Đổi: Đẩy vào Data + Tự động đổi tất cả các ô có cùng icon trong rương
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
-    btnSaveSide.addEventListener("click", async () => {
+    btnSaveSide.onclick = async function() {
       const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
       if (!chest) return alert("Chưa có dữ liệu rương để lưu!");
 
@@ -138,27 +139,51 @@ window.addEventListener("DOMContentLoaded", () => {
       const newQty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
 
       if (!chest.slots) chest.slots = Array(30).fill(null);
-      const existing = chest.slots[idx] || {};
+      const targetSlot = chest.slots[idx] || {};
 
+      // 1. Cập nhật ô đang chọn
       chest.slots[idx] = {
         name: newName,
         qty: newName ? newQty : 0,
-        cropImg: existing.cropImg || null,
-        aiOriginalQty: existing.aiOriginalQty || newQty
+        cropImg: targetSlot.cropImg || null,
+        aiOriginalQty: targetSlot.aiOriginalQty || newQty
       };
 
-      if (newName && existing.cropImg) {
-        const hash = await computeImageHash(existing.cropImg);
+      // 2. ĐẨY THẲNG VÀO DATA & TÍNH MÃ BĂM NHẬN DIỆN
+      if (newName && targetSlot.cropImg) {
+        const hash = await computeImageHash(targetSlot.cropImg);
         if (!appState.learnedIcons) appState.learnedIcons = {};
-        appState.learnedIcons[newName] = { img: existing.cropImg, hash: hash };
+        
+        // Lưu vĩnh viễn vào bộ nhớ hệ thống
+        appState.learnedIcons[newName] = { img: targetSlot.cropImg, hash: hash };
+
+        // Đẩy tên mới vào danh mục KNOWN_ITEMS nếu chưa có
         if (typeof KNOWN_ITEMS !== "undefined" && !KNOWN_ITEMS.includes(newName)) {
           KNOWN_ITEMS.push(newName);
         }
-      }
 
-      saveState();
-      showToast(`Đã lưu ô ${idx + 1} và nạp icon [${newName}] vào bộ nhớ!`, "success");
-    });
+        // 3. TỰ ĐỘNG ĐỔI TẤT CẢ CÁC Ô TRÙNG ICON CÒN LẠI TRONG RƯƠNG HIỆN TẠI
+        let autoUpdatedCount = 1;
+        for (let i = 0; i < 30; i++) {
+          if (i === idx) continue;
+          const otherSlot = chest.slots[i];
+          if (otherSlot && otherSlot.cropImg) {
+            const otherHash = await computeImageHash(otherSlot.cropImg);
+            // Nếu độ giống nhau >= 90% (khoảng cách hamming <= 6)
+            if (getHammingDistance(hash, otherHash) <= 6) {
+              otherSlot.name = newName;
+              autoUpdatedCount++;
+            }
+          }
+        }
+
+        saveState();
+        showToast(`Đã lưu [${newName}] vào Data & tự cập nhật ${autoUpdatedCount} ô có cùng icon!`, "success");
+      } else {
+        saveState();
+        showToast(`Đã lưu cập nhật ô ${idx + 1}!`, "success");
+      }
+    };
   }
 
   // 6. Dạy AI Học Lại Số Này
