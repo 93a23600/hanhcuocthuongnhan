@@ -71,7 +71,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 3. ĐIỀU KHIỂN MODAL CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 30 Ô
+  // 3. ĐIỀU KHIỂN MODAL CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 35 Ô (5x7)
   ["Top", "Bottom", "Left", "Right"].forEach(side => {
     const range = document.getElementById(`rangeCrop${side}`);
     if (range) {
@@ -109,7 +109,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Bấm Xác Nhận Khung -> Tự học khung & Cắt 30 ô chuyển sang bước nạp
+  // Bấm Xác Nhận Khung -> Tự học khung & Cắt 35 ô chuyển sang bước nạp
   const btnConfirmCalib = document.getElementById("btnConfirmCalibrate");
   if (btnConfirmCalib) {
     btnConfirmCalib.onclick = () => {
@@ -121,7 +121,7 @@ window.addEventListener("DOMContentLoaded", () => {
         appState.learnedGridCrop = Object.assign({}, currentCropRatios);
         saveBrainState();
 
-        // Cắt 30 ô theo tỉ lệ đã căn
+        // Cắt đúng 35 ô theo tỉ lệ đã căn (5 cột x 7 hàng)
         pendingCrops = sliceGridWithRatios(pendingRawImg, currentCropRatios);
 
         // Tạo ảnh preview vùng đã cắt gọn
@@ -235,7 +235,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI
+  // 7. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI (QUÉT ĐỦ 35 Ô)
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.onclick = async function() {
@@ -249,7 +249,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const newName = nameInp ? nameInp.value.trim() : null;
       const newQty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
 
-      if (!chest.slots) chest.slots = Array(30).fill(null);
+      // Chuẩn khởi tạo 35 ô (5x7)
+      if (!chest.slots) chest.slots = Array(35).fill(null);
       const targetSlot = chest.slots[idx] || {};
 
       chest.slots[idx] = {
@@ -274,9 +275,9 @@ window.addEventListener("DOMContentLoaded", () => {
           KNOWN_ITEMS.push(newName);
         }
 
-        // Tự động đổi tất cả các ô có cùng icon trong rương hiện tại
+        // Tự động đổi tất cả các ô có cùng icon trong toàn bộ 35 ô rương
         let count = 1;
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 35; i++) {
           if (i === idx) continue;
           const other = chest.slots[i];
           if (other && other.cropImg) {
@@ -488,7 +489,7 @@ window.addEventListener("DOMContentLoaded", () => {
       a.download = `bo_nao_kiem_kho_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Đã xuất file não bộ (${count} icon đã học & khung viền chuẩn)!`, "success");
+      showToast(`Đã xuất file não bộ (${count} icon đã học & khung viền chuẩn 35 ô)!`, "success");
     };
   }
 
