@@ -1,3 +1,5 @@
+let pendingImage = null; // Lưu ảnh tạm thời chờ xác nhận Acc & Rương
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -63,55 +65,62 @@ QUY TẮC QUAN TRỌNG:
   return parsed;
 }
 
+// Khi người dùng dán hoặc thả ảnh -> MỞ POPUP XÁC NHẬN
 async function handleIncomingImages(files) {
   if (!files || files.length === 0) return;
+  const file = files[0];
+  if (!file.type.startsWith("image/")) return;
+
+  const { base64, dataUrl } = await fileToBase64(file);
+  pendingImage = { base64, dataUrl };
+
+  // Mở Popup
+  document.getElementById("uploadPreviewImg").src = dataUrl;
+  openConfirmUploadModal();
+}
+
+// Bấm nút "Cập Nhật Rương" trên Modal
+async function executeUploadToChest(accountName, chestTitle) {
+  if (!pendingImage) return;
   const readingBadge = document.getElementById("readingBadge");
   readingBadge.classList.remove("hidden");
+  showToast(`Đang phân tích và nạp vào [${accountName} - ${chestTitle}]...`, "info");
 
-  const select = document.getElementById("targetChestSelect");
-  const targetChestId = select.value;
-  const targetChest = appState.chests.find(c => c.id === targetChestId);
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (!file.type.startsWith("image/")) continue;
-
-    const chestDisplayName = targetChest ? targetChest.title : `Rương ${appState.chests.length + 1}`;
-    showToast(`Đang phân tích hình ảnh nạp vào [${chestDisplayName}]...`, "info");
-
-    try {
-      const { base64, dataUrl } = await fileToBase64(file);
-      let detectedSlots = [];
-
-      if (appState.apiKey && appState.apiKey.trim().length > 0) {
-        detectedSlots = await analyzeChestWithGemini(base64);
-      } else {
-        await new Promise(r => setTimeout(r, 600));
-        const mockIndex = Math.abs(appState.chests.length) % MOCK_CHESTS_DATA.length;
-        detectedSlots = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA[mockIndex].slots));
-      }
-
-      if (targetChest) {
-        targetChest.slots = detectedSlots;
-        targetChest.imageUrl = dataUrl;
-        targetChest.createdAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-      } else {
-        const newChestId = "chest-" + Date.now();
-        appState.chests.push({
-          id: newChestId,
-          title: chestDisplayName,
-          imageUrl: dataUrl,
-          createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
-          slots: detectedSlots
-        });
-      }
-
-      showToast(`Đã nhận diện và cập nhật thành công [${chestDisplayName}]! (${detectedSlots.length} ô)`, "success");
-      savePersistedState();
-    } catch (err) {
-      console.error(err);
-      showToast(`Lỗi phân tích ảnh: ${err.message}`, "error");
+  try {
+    let detectedSlots = [];
+    if (appState.apiKey && appState.apiKey.trim().length > 0) {
+      detectedSlots = await analyzeChestWithGemini(pendingImage.base64);
+    } else {
+      await new Promise(r => setTimeout(r, 600));
+      detectedSlots = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA[0].slots));
     }
+
+    // Tìm xem rương này của Acc này đã có chưa
+    let targetChest = appState.chests.find(c => c.account === accountName && c.title === chestTitle);
+    if (targetChest) {
+      // Có rồi -> Cập nhật đè
+      targetChest.slots = detectedSlots;
+      targetChest.imageUrl = pendingImage.dataUrl;
+      targetChest.createdAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    } else {
+      // Chưa có -> Tạo rương mới cho Acc này
+      appState.chests.push({
+        id: "chest-" + Date.now(),
+        account: accountName,
+        title: chestTitle,
+        imageUrl: pendingImage.dataUrl,
+        createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
+        slots: detectedSlots
+      });
+    }
+
+    showToast(`Đã cập nhật thành công [${accountName} - ${chestTitle}] (${detectedSlots.length} ô)!`, "success");
+    savePersistedState();
+  } catch (err) {
+    console.error(err);
+    showToast(`Lỗi phân tích: ${err.message}`, "error");
+  } finally {
+    readingBadge.classList.add("hidden");
+    pendingImage = null;
   }
-  readingBadge.classList.add("hidden");
 }
