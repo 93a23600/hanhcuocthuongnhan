@@ -8,10 +8,10 @@ let appState = {
   apiKey: localStorage.getItem("gemini_api_key") || "",
   accounts: [],
   chests: [],
-  // Bộ não học máy:
+  // Bộ não học máy vĩnh viễn:
   learnedIcons: {},        // { "phật kinh": { img: "data:...", hash: "..." } }
   trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
-  customKnownItems: [],    // Các tên mới thêm ngoài danh mục KNOWN_ITEMS gốc
+  customKnownItems: [],    // Danh sách tên bạn từng gõ thêm
   ignoredItems: [],
   snapshot: null,
   searchQuery: "",
@@ -36,7 +36,7 @@ function loadState() {
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
       appState.customKnownItems = parsedBrain.customKnownItems || [];
       
-      // Đồng bộ tên đã học vào KNOWN_ITEMS
+      // Đồng bộ tên đã học vào danh mục chuẩn KNOWN_ITEMS
       if (typeof KNOWN_ITEMS !== "undefined") {
         appState.customKnownItems.forEach(name => {
           if (!KNOWN_ITEMS.includes(name)) KNOWN_ITEMS.push(name);
@@ -56,38 +56,70 @@ function loadState() {
       appState.chests = parsedChests.chests || [];
       appState.ignoredItems = parsedChests.ignoredItems || [];
       appState.snapshot = parsedChests.snapshot || null;
+      
+      // Đặt giá trị acc đang xem mặc định nếu có
+      if (appState.accounts.length > 0 && !appState.viewingAcc) {
+        appState.viewingAcc = appState.accounts[0];
+      }
     } catch (e) {
       console.error("Lỗi nạp rương:", e);
     }
   }
 }
 
-// 2. Lưu dữ liệu rương hàng ngày
+// 2. Lưu dữ liệu rương hàng ngày (Có bắt lỗi chống tràn bộ nhớ 5MB của LocalStorage)
 function saveChestsState() {
-  localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
-    accounts: appState.accounts,
-    chests: appState.chests,
-    ignoredItems: appState.ignoredItems,
-    snapshot: appState.snapshot
-  }));
-  renderAll();
+  try {
+    localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
+      accounts: appState.accounts,
+      chests: appState.chests,
+      ignoredItems: appState.ignoredItems,
+      snapshot: appState.snapshot
+    }));
+  } catch (err) {
+    console.warn("Cảnh báo: Bộ nhớ rương bị đầy, đang tối ưu lược bớt ảnh cũ...", err);
+    // Nếu đầy, lọc bớt cropImg trong các rương cũ, chỉ giữ tên và số lượng
+    try {
+      const slimChests = appState.chests.map(c => ({
+        ...c,
+        slots: (c.slots || []).map(s => ({ name: s.name, qty: s.qty, cropImg: s.cropImg }))
+      }));
+      localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
+        accounts: appState.accounts,
+        chests: slimChests,
+        ignoredItems: appState.ignoredItems,
+        snapshot: appState.snapshot
+      }));
+    } catch (e) {
+      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' để sao lưu dữ liệu.");
+    }
+  }
+
+  if (typeof renderAll === "function") {
+    renderAll();
+  }
 }
 
-// 3. LƯU BỘ NÃO HỌC MÁY (RIÊNG BIỆT - TUYỆT ĐỐI KHÔNG BỊ GHI ĐÈ BỞI RƯƠNG)
+// 3. LƯU BỘ NÃO HỌC MÁY (RIÊNG BIỆT - TUYỆT ĐỐI KHÔNG BỊ GHI ĐÈ KHI XÓA RƯƠNG)
 function saveBrainState() {
-  localStorage.setItem(STORAGE_BRAIN_KEY, JSON.stringify({
-    learnedIcons: appState.learnedIcons,
-    trainedNumberErrors: appState.trainedNumberErrors,
-    customKnownItems: appState.customKnownItems
-  }));
+  try {
+    localStorage.setItem(STORAGE_BRAIN_KEY, JSON.stringify({
+      learnedIcons: appState.learnedIcons,
+      trainedNumberErrors: appState.trainedNumberErrors,
+      customKnownItems: appState.customKnownItems
+    }));
+  } catch (e) {
+    console.error("Lỗi lưu não bộ:", e);
+  }
 }
 
-// Hàm lưu tổng hợp
+// Hàm lưu tổng hợp cả 2
 function saveState() {
-  saveChestsState();
   saveBrainState();
+  saveChestsState();
 }
 
+// 4. Tính toán tổng hợp toàn kho
 function calculateSummary() {
   const map = new Map();
   appState.chests.forEach(chest => {
@@ -115,7 +147,8 @@ function calculateSummary() {
 
   let res = Array.from(map.values());
   if (appState.searchQuery) {
-    res = res.filter(i => i.name.toLowerCase().includes(appState.searchQuery.toLowerCase()));
+    const q = appState.searchQuery.toLowerCase();
+    res = res.filter(i => i.name.toLowerCase().includes(q));
   }
   if (!appState.showIgnored) {
     res = res.filter(i => !i.isIgnored);
