@@ -1,3 +1,5 @@
+let currentEditingSlotIdx = null;
+
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
   const toast = document.createElement("div");
@@ -25,7 +27,7 @@ function updateApiKeyUI() {
   } else {
     modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
     modeBadge.textContent = "Chế độ Demo";
-    modeDesc.textContent = "Chưa cài API Key. Khi dán ảnh sẽ nạp dữ liệu mẫu.";
+    modeDesc.textContent = "Chưa cài API Key. Dán ảnh sẽ chạy chế độ demo.";
     apiKeyLabel.textContent = "Cài đặt API";
   }
 }
@@ -44,20 +46,91 @@ function openUploadModal() {
   lucide.createIcons();
 }
 
-function renderAll() {
-  const filterSelect = document.getElementById("filterAccountSelect");
-  const curFilter = appState.selectedAccFilter;
-  filterSelect.innerHTML = `<option value="ALL">Tất Cả Tài Khoản</option>` + 
-    appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
-  filterSelect.value = curFilter;
+/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 30 Ô */
+function renderGameGridChest() {
+  const selectAcc = document.getElementById("selectViewingAcc");
+  if (!appState.viewingAcc && appState.accounts.length > 0) {
+    appState.viewingAcc = appState.accounts[0];
+  }
 
+  selectAcc.innerHTML = appState.accounts.map(acc => `<option value="${acc}" ${acc === appState.viewingAcc ? 'selected' : ''}>${acc}</option>`).join("");
+
+  const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
+  const container = document.getElementById("gameGridSlotsContainer");
+  const label = document.getElementById("currentChestLabel");
+  const countLabel = document.getElementById("currentChestSlotCount");
+
+  label.textContent = `${appState.viewingAcc || 'Chưa chọn'} - ${appState.viewingChest}`;
+
+  let filledCount = 0;
+  container.innerHTML = "";
+
+  for (let i = 0; i < 30; i++) {
+    const slot = (chest && chest.slots) ? chest.slots[i] : null;
+    const hasItem = slot && slot.name;
+    if (hasItem) filledCount++;
+
+    const cell = document.createElement("div");
+    cell.className = `game-slot-cell ${hasItem ? 'has-item' : 'is-empty'}`;
+    cell.title = hasItem ? `${slot.name} (x${slot.qty}) - Nhấp để sửa` : `Ô ${i + 1} (Trống) - Nhấp để thêm`;
+
+    if (hasItem) {
+      cell.innerHTML = `
+        <img src="${slot.cropImg || appState.itemIcons[slot.name] || ''}" class="w-full h-full object-cover">
+        <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
+      `;
+    }
+
+    cell.addEventListener("click", () => openEditSlotModal(i, slot));
+    container.appendChild(cell);
+  }
+
+  countLabel.textContent = `${filledCount}/30 ô có đồ`;
+}
+
+/* POPUP BẮT LỖI & SỬA Ô */
+function openEditSlotModal(slotIndex, slotData) {
+  const currentChest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
+  if (!currentChest) {
+    alert("Vui lòng dán ảnh tạo rương trước khi chỉnh sửa!");
+    return;
+  }
+
+  currentEditingSlotIdx = slotIndex;
+  const modal = document.getElementById("editSlotModal");
+  const img = document.getElementById("editSlotCropImg");
+  const nameInput = document.getElementById("editSlotItemName");
+  const qtyInput = document.getElementById("editSlotItemQty");
+
+  // Datalist gợi ý vật phẩm
+  const dl = document.getElementById("knownItemsDatalist");
+  dl.innerHTML = KNOWN_ITEMS.map(it => `<option value="${it}"></option>`).join("");
+
+  img.src = (slotData && slotData.cropImg) ? slotData.cropImg : '';
+  nameInput.value = slotData ? (slotData.name || '') : '';
+  qtyInput.value = slotData ? (slotData.qty || 0) : 0;
+
+  modal.classList.remove("hidden");
+  nameInput.focus();
+  lucide.createIcons();
+}
+
+function renderAll() {
+  renderGameGridChest();
+
+  // Bảng Tổng Kho
   const summary = calculateSummary();
   let grandTotal = 0;
   summary.forEach(i => { if (!i.isIgnored) grandTotal += i.totalQty; });
+
   document.getElementById("statAccCount").textContent = appState.accounts.length;
   document.getElementById("statChestsCount").textContent = appState.chests.length;
   document.getElementById("statTotalItems").textContent = grandTotal.toLocaleString('vi-VN');
-  document.getElementById("chestTabCount").textContent = appState.chests.length;
+
+  const filterSelect = document.getElementById("filterAccountSelect");
+  filterSelect.innerHTML = `<option value="ALL">Tất Cả Tài Khoản</option>` + 
+    appState.accounts.map(acc => `<option value="${acc}">${acc}</option>`).join("");
+  filterSelect.value = appState.selectedAccFilter;
 
   const tbody = document.getElementById("summaryTableBody");
   const emptyNotice = document.getElementById("emptySummaryNotice");
@@ -71,53 +144,23 @@ function renderAll() {
       const tr = document.createElement("tr");
       tr.className = `hover:bg-slate-800/40 transition border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40' : ''}`;
       const pills = Array.from(item.foundIn).map(f => `<span class="bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 mr-1 border border-slate-700">${f}</span>`).join("");
+      
+      const iconImg = item.icon ? `<img src="${item.icon}" class="w-8 h-8 rounded border border-slate-700 object-cover bg-slate-950">` : `<div class="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-600">✦</div>`;
+
       tr.innerHTML = `
         <td class="py-3 px-4 text-center font-mono text-slate-500">${idx + 1}</td>
-        <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full ${item.isIgnored ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
-          <span>${item.name}</span>
-        </td>
+        <td class="py-2 px-4">${iconImg}</td>
+        <td class="py-3 px-4 font-semibold text-white">${item.name}</td>
         <td class="py-3 px-4 text-center"><span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">${item.stacks} ô</span></td>
         <td class="py-3 px-4 text-center">${pills}</td>
         <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm">${item.totalQty.toLocaleString('vi-VN')}</td>
         <td class="py-3 px-4 text-center">
-          <button onclick="toggleIgnoreItem('${item.name}')" title="Bỏ qua / Theo dõi lại" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400">
+          <button onclick="toggleIgnoreItem('${item.name}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400">
             <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
           </button>
         </td>
       `;
       tbody.appendChild(tr);
-    });
-  }
-
-  const container = document.getElementById("chestsContainer");
-  const emptyChest = document.getElementById("emptyChestNotice");
-  container.innerHTML = "";
-  if (appState.chests.length === 0) {
-    emptyChest.classList.remove("hidden");
-  } else {
-    emptyChest.classList.add("hidden");
-    appState.chests.forEach(chest => {
-      const card = document.createElement("div");
-      card.className = "bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3";
-      const slotsHtml = chest.slots.map((s) => `
-        <div class="bg-game-slot p-2 rounded-xl border border-slate-800 text-[11px] flex justify-between">
-          <span class="text-slate-300 truncate">${s.name}</span>
-          <span class="text-amber-400 font-mono font-bold">x${s.qty}</span>
-        </div>
-      `).join("");
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div>
-            <span class="text-emerald-400 font-bold text-xs bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded mr-1">${chest.account}</span>
-            <strong class="text-white text-sm">${chest.title}</strong>
-          </div>
-          <button onclick="removeChest('${chest.id}')" class="text-slate-500 hover:text-red-400 text-xs"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">${slotsHtml || '<p class="text-slate-600 text-xs italic">Trống</p>'}</div>
-      `;
-      container.appendChild(card);
     });
   }
 
@@ -134,7 +177,9 @@ function renderDiffView() {
     return;
   }
   const cur = {};
-  appState.chests.forEach(c => c.slots.forEach(s => cur[s.name] = (cur[s.name] || 0) + (parseInt(s.qty) || 0)));
+  appState.chests.forEach(c => (c.slots || []).forEach(s => {
+    if (s && s.name) cur[s.name] = (cur[s.name] || 0) + (parseInt(s.qty) || 0);
+  }));
   const allNames = Array.from(new Set([...Object.keys(cur), ...Object.keys(appState.snapshot)]));
   const diffs = allNames.map(name => ({ name, diff: (cur[name] || 0) - (appState.snapshot[name] || 0) }));
 
