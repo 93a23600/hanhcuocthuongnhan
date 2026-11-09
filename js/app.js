@@ -123,8 +123,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (btnCancel) btnCancel.addEventListener("click", closeUploadPopup);
   if (btnDismiss) btnDismiss.addEventListener("click", closeUploadPopup);
 
-  // 5. Lưu Thay Đổi Ô Bên Panel Phải
-  // Lưu Thay Đổi: Đẩy vào Data + Tự động đổi tất cả các ô có cùng icon trong rương
+  // 1. Khi bạn lưu tên mới (Ví dụ đổi thành "phật kinh")
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.onclick = async function() {
@@ -141,7 +140,6 @@ window.addEventListener("DOMContentLoaded", () => {
       if (!chest.slots) chest.slots = Array(30).fill(null);
       const targetSlot = chest.slots[idx] || {};
 
-      // 1. Cập nhật ô đang chọn
       chest.slots[idx] = {
         name: newName,
         qty: newName ? newQty : 0,
@@ -149,39 +147,84 @@ window.addEventListener("DOMContentLoaded", () => {
         aiOriginalQty: targetSlot.aiOriginalQty || newQty
       };
 
-      // 2. ĐẨY THẲNG VÀO DATA & TÍNH MÃ BĂM NHẬN DIỆN
+      // NẠP VĨNH VIỄN VÀO BỘ NÃO AI
       if (newName && targetSlot.cropImg) {
         const hash = await computeImageHash(targetSlot.cropImg);
-        if (!appState.learnedIcons) appState.learnedIcons = {};
         
-        // Lưu vĩnh viễn vào bộ nhớ hệ thống
+        // Ghi vào não bộ
         appState.learnedIcons[newName] = { img: targetSlot.cropImg, hash: hash };
-
-        // Đẩy tên mới vào danh mục KNOWN_ITEMS nếu chưa có
+        if (!appState.customKnownItems.includes(newName)) {
+          appState.customKnownItems.push(newName);
+        }
         if (typeof KNOWN_ITEMS !== "undefined" && !KNOWN_ITEMS.includes(newName)) {
           KNOWN_ITEMS.push(newName);
         }
 
-        // 3. TỰ ĐỘNG ĐỔI TẤT CẢ CÁC Ô TRÙNG ICON CÒN LẠI TRONG RƯƠNG HIỆN TẠI
-        let autoUpdatedCount = 1;
+        // Tự động đổi tất cả các ô cùng icon trong rương này
+        let count = 1;
         for (let i = 0; i < 30; i++) {
           if (i === idx) continue;
-          const otherSlot = chest.slots[i];
-          if (otherSlot && otherSlot.cropImg) {
-            const otherHash = await computeImageHash(otherSlot.cropImg);
-            // Nếu độ giống nhau >= 90% (khoảng cách hamming <= 6)
+          const other = chest.slots[i];
+          if (other && other.cropImg) {
+            const otherHash = await computeImageHash(other.cropImg);
             if (getHammingDistance(hash, otherHash) <= 6) {
-              otherSlot.name = newName;
-              autoUpdatedCount++;
+              other.name = newName;
+              count++;
             }
           }
         }
 
-        saveState();
-        showToast(`Đã lưu [${newName}] vào Data & tự cập nhật ${autoUpdatedCount} ô có cùng icon!`, "success");
+        saveBrainState();  // Lưu ngay vào kho não vĩnh viễn
+        saveChestsState(); // Cập nhật rương
+        showToast(`Đã ghi nhớ vĩnh viễn [${newName}] và cập nhật ${count} ô trùng!`, "success");
       } else {
-        saveState();
-        showToast(`Đã lưu cập nhật ô ${idx + 1}!`, "success");
+        saveChestsState();
+        showToast(`Đã cập nhật ô ${idx + 1}!`, "success");
+      }
+    };
+  }
+
+  // 2. Khi dạy AI số lượng đúng
+  const btnTrain = document.getElementById("btnTrainAiWrongNumber");
+  if (btnTrain) {
+    btnTrain.onclick = function() {
+      const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
+      if (!chest) return;
+      const idx = appState.selectedSlotIndex;
+      const slot = chest.slots ? chest.slots[idx] : null;
+      if (!slot) return;
+
+      const wrongQty = slot.qty;
+      const correctInput = prompt(`AI nhận diện là [${wrongQty}]. Nhập số CHÍNH XÁC để dạy AI:`, wrongQty);
+
+      if (correctInput !== null && correctInput.trim() !== "") {
+        const correctVal = parseInt(correctInput.trim()) || 0;
+        slot.qty = correctVal;
+
+        // Lưu vĩnh viễn vào kho lỗi để AI bám theo học
+        appState.trainedNumberErrors.push({
+          wrongQty: wrongQty,
+          correctQty: correctVal,
+          itemName: slot.name || "Không rõ"
+        });
+
+        saveBrainState();  // Lưu ngay vào kho não
+        saveChestsState();
+        showToast(`Đã nạp quy tắc đọc số [${wrongQty} -> ${correctVal}] vào bộ nhớ AI vĩnh viễn!`, "success");
+      }
+    };
+  }
+
+  // 3. NÚT XÓA HẾT DỮ LIỆU: Chỉ xóa ảnh rương, GIỮ NGUYÊN BỘ NÃO ĐÃ HỌC
+  const btnReset = document.getElementById("btnResetAll");
+  if (btnReset) {
+    btnReset.onclick = function() {
+      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
+        localStorage.removeItem(STORAGE_CHESTS_KEY); // Chỉ xóa rương
+        appState.chests = [];
+        appState.accounts = [];
+        saveChestsState();
+        location.reload();
       }
     };
   }
