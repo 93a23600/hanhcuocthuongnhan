@@ -15,25 +15,30 @@ window.addEventListener("DOMContentLoaded", () => {
   loadState();
   updateApiKeyUI();
 
-  // 1. Bắt phím Ctrl + V dán ảnh toàn trang
+  // 1. Nhận sự kiện Ctrl + V dán ảnh
   window.addEventListener("paste", (e) => {
-    const items = e.clipboardData?.items;
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
-        handleIncomingFile(items[i].getAsFile());
-        break;
+        const blob = items[i].getAsFile();
+        if (blob) {
+          e.preventDefault();
+          handleIncomingFile(blob);
+          break;
+        }
       }
     }
   });
 
-  // 2. Kéo thả & Chọn tệp
+  // 2. Chọn tệp & Kéo thả
   const fileInput = document.getElementById("fileInput");
   const btnBrowse = document.getElementById("btnBrowseFile");
   const dropZone = document.getElementById("dropZone");
 
   if (btnBrowse && fileInput) {
     btnBrowse.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
       fileInput.click();
     });
@@ -46,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
     dropZone.addEventListener("drop", (e) => {
       e.preventDefault();
       dropZone.classList.remove("drop-active");
-      if (e.dataTransfer.files?.[0]) handleIncomingFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer?.files?.[0]) handleIncomingFile(e.dataTransfer.files[0]);
     });
   }
 
@@ -57,7 +62,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. Chọn nhanh Rương 1 2 3 trên Popup nạp ảnh
+  // 3. Chọn Rương 1 2 3 trên Popup nạp ảnh
   document.querySelectorAll(".btn-chest-num").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".btn-chest-num").forEach(b => {
@@ -83,7 +88,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 4. Nút Cập Nhật Rương trên Popup
+  // 4. Bấm "Cập Nhật Rương"
   const btnConfirm = document.getElementById("btnConfirmUpload");
   if (btnConfirm) {
     btnConfirm.addEventListener("click", () => {
@@ -107,7 +112,6 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 5. Đóng Popup nạp ảnh
   const closeUploadPopup = () => {
     const modal = document.getElementById("confirmUploadModal");
     if (modal) modal.classList.add("hidden");
@@ -119,7 +123,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (btnCancel) btnCancel.addEventListener("click", closeUploadPopup);
   if (btnDismiss) btnDismiss.addEventListener("click", closeUploadPopup);
 
-  // 6. Lưu Thay Đổi Ô Trên Panel Bên Cạnh (Sidebar) & Tự Động Học Icon
+  // 5. Lưu Thay Đổi Ô Bên Panel Phải
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.addEventListener("click", async () => {
@@ -143,9 +147,9 @@ window.addEventListener("DOMContentLoaded", () => {
         aiOriginalQty: existing.aiOriginalQty || newQty
       };
 
-      // TỰ ĐỘNG LƯU ICON VÀO BỘ NHỚ: Nếu có ảnh cắt và có tên, băm hash để lần sau tự khớp
       if (newName && existing.cropImg) {
         const hash = await computeImageHash(existing.cropImg);
+        if (!appState.learnedIcons) appState.learnedIcons = {};
         appState.learnedIcons[newName] = { img: existing.cropImg, hash: hash };
         if (typeof KNOWN_ITEMS !== "undefined" && !KNOWN_ITEMS.includes(newName)) {
           KNOWN_ITEMS.push(newName);
@@ -157,7 +161,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Báo AI Học Lại Số Này (Feedback Correction Loop)
+  // 6. Dạy AI Học Lại Số Này
   const btnTrain = document.getElementById("btnTrainAiWrongNumber");
   if (btnTrain) {
     btnTrain.addEventListener("click", () => {
@@ -182,12 +186,12 @@ window.addEventListener("DOMContentLoaded", () => {
         });
 
         saveState();
-        showToast(`Đã ghi nhớ mẫu [${wrongQty} -> ${correctVal}]. Lần sau AI sẽ đối chiếu để quét chuẩn hơn!`, "success");
+        showToast(`Đã ghi nhớ: [${wrongQty} -> ${correctVal}]. Lần sau AI sẽ đọc chuẩn hơn!`, "success");
       }
     });
   }
 
-  // 8. Làm rỗng ô trên Panel
+  // 7. Làm rỗng ô
   const btnEmptySide = document.getElementById("btnSidePanelEmptySlot");
   if (btnEmptySide) {
     btnEmptySide.addEventListener("click", () => {
@@ -202,7 +206,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 9. Chuyển Acc & Rương trên Tab Game Grid
+  // 8. Chuyển Acc & Rương đang xem
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc) {
     selectAcc.addEventListener("change", (e) => {
@@ -224,7 +228,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 10. Chuyển Tab (Rương Game / Tổng Kho / Biến Động)
+  // 9. Chuyển Tabs
   const tabGameGridBtn = document.getElementById("tabGameGridBtn");
   const tabSummaryBtn = document.getElementById("tabSummaryBtn");
   const tabDiffBtn = document.getElementById("tabDiffBtn");
@@ -258,7 +262,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (tabSummaryBtn) tabSummaryBtn.addEventListener("click", () => setTab("summary"));
   if (tabDiffBtn) tabDiffBtn.addEventListener("click", () => setTab("diff"));
 
-  // 11. Bộ lọc Acc & Tìm kiếm
+  // 10. Bộ lọc
   const filterAcc = document.getElementById("filterAccountSelect");
   if (filterAcc) {
     filterAcc.addEventListener("change", (e) => {
@@ -275,7 +279,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 12. Snapshot so sánh biến động
+  // 11. Snapshot
   const btnSnap = document.getElementById("btnCreateSnapshot");
   if (btnSnap) {
     btnSnap.addEventListener("click", () => {
@@ -300,7 +304,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 13. Sao chép bảng ra Excel
+  // 12. Copy Bảng
   const btnCopy = document.getElementById("btnCopyTable");
   if (btnCopy) {
     btnCopy.addEventListener("click", () => {
@@ -313,7 +317,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 14. Xoá sạch toàn bộ dữ liệu
+  // 13. Reset tất cả
   const btnReset = document.getElementById("btnResetAll");
   if (btnReset) {
     btnReset.addEventListener("click", () => {
@@ -324,7 +328,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 15. Cấu hình Gemini API Key Modal
+  // 14. Modal API
   const configModal = document.getElementById("configModal");
   const inputApiKey = document.getElementById("inputApiKey");
   const btnOpenCfg = document.getElementById("btnOpenConfig");
