@@ -1,10 +1,13 @@
-const STORAGE_KEY = "HKTN_INVENTORY_DATA_V3_GRID";
+const STORAGE_KEY = "HKTN_INVENTORY_DATA_V4_SMART";
 
 let appState = {
   apiKey: localStorage.getItem("gemini_api_key") || "",
   accounts: [],
-  chests: [], // Cấu trúc: { id, account, title, slots: Array(30) } -> slots: [{ name, qty, cropImg }]
-  itemIcons: {}, // Từ điển lưu ảnh crop icon theo tên: { "Cánh sen": "data:image/png..." }
+  chests: [],
+  // 1. Lưu icon theo tên vật phẩm: { "Cánh sen": { img: "data:...", hash: "11001010..." } }
+  learnedIcons: {}, 
+  // 2. Lưu các trường hợp số bị AI đọc sai để làm mẫu prompt (Few-shot learning):
+  trainedNumberErrors: [], // [{ cropImg, wrongQty, correctQty }]
   ignoredItems: [],
   snapshot: null,
   searchQuery: "",
@@ -14,7 +17,8 @@ let appState = {
   sortDesc: true,
   currentTab: "gameGrid",
   viewingAcc: "",
-  viewingChest: "Rương 1"
+  viewingChest: "Rương 1",
+  selectedSlotIndex: 0 // Ô đang click chọn xem bên khung phải
 };
 
 function loadState() {
@@ -24,7 +28,8 @@ function loadState() {
       const parsed = JSON.parse(saved);
       appState.accounts = parsed.accounts || [];
       appState.chests = parsed.chests || [];
-      appState.itemIcons = parsed.itemIcons || {};
+      appState.learnedIcons = parsed.learnedIcons || {};
+      appState.trainedNumberErrors = parsed.trainedNumberErrors || [];
       appState.ignoredItems = parsed.ignoredItems || [];
       appState.snapshot = parsed.snapshot || null;
     } catch (e) {
@@ -37,7 +42,8 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     accounts: appState.accounts,
     chests: appState.chests,
-    itemIcons: appState.itemIcons,
+    learnedIcons: appState.learnedIcons,
+    trainedNumberErrors: appState.trainedNumberErrors,
     ignoredItems: appState.ignoredItems,
     snapshot: appState.snapshot
   }));
@@ -58,7 +64,7 @@ function calculateSummary() {
           totalQty: 0,
           stacks: 0,
           foundIn: new Set(),
-          icon: slot.cropImg || appState.itemIcons[name] || null,
+          icon: slot.cropImg || (appState.learnedIcons[name]?.img) || null,
           isIgnored: appState.ignoredItems.includes(name)
         });
       }
