@@ -46,21 +46,18 @@ function openUploadModal() {
   lucide.createIcons();
 }
 
-/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 30 Ô */
+/* RENDER RƯƠNG 5x6 VÀ CẬP NHẬT PANEL BÊN CẠNH */
 function renderGameGridChest() {
   const selectAcc = document.getElementById("selectViewingAcc");
   if (!appState.viewingAcc && appState.accounts.length > 0) {
     appState.viewingAcc = appState.accounts[0];
   }
-
   selectAcc.innerHTML = appState.accounts.map(acc => `<option value="${acc}" ${acc === appState.viewingAcc ? 'selected' : ''}>${acc}</option>`).join("");
 
   const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
   const container = document.getElementById("gameGridSlotsContainer");
-  const label = document.getElementById("currentChestLabel");
   const countLabel = document.getElementById("currentChestSlotCount");
-
-  label.textContent = `${appState.viewingAcc || 'Chưa chọn'} - ${appState.viewingChest}`;
+  document.getElementById("currentChestLabel").textContent = `${appState.viewingAcc || 'Chưa chọn'} - ${appState.viewingChest}`;
 
   let filledCount = 0;
   container.innerHTML = "";
@@ -70,21 +67,70 @@ function renderGameGridChest() {
     const hasItem = slot && slot.name;
     if (hasItem) filledCount++;
 
+    const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    cell.className = `game-slot-cell ${hasItem ? 'has-item' : 'is-empty'}`;
-    cell.title = hasItem ? `${slot.name} (x${slot.qty}) - Nhấp để sửa` : `Ô ${i + 1} (Trống) - Nhấp để thêm`;
+    cell.className = `game-slot-cell ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-emerald-400 border-transparent' : ''}`;
+    cell.title = hasItem ? `${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
       cell.innerHTML = `
-        <img src="${slot.cropImg || appState.itemIcons[slot.name] || ''}" class="w-full h-full object-cover">
+        <img src="${slot.cropImg || ''}" class="w-full h-full object-cover">
         <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
       `;
     }
 
-    cell.addEventListener("click", () => openEditSlotModal(i, slot));
+    // Bấm vào ô -> Cập nhật thông tin sang Panel bên phải ngay lập tức
+    cell.addEventListener("click", () => {
+      appState.selectedSlotIndex = i;
+      renderGameGridChest();
+      updateSidePanelInfo(i, slot);
+    });
+
     container.appendChild(cell);
   }
 
+  countLabel.textContent = `${filledCount}/30 ô có đồ`;
+  
+  // Hiển thị thông tin ô hiện tại vào panel phải
+  const curSlot = (chest && chest.slots) ? chest.slots[appState.selectedSlotIndex] : null;
+  updateSidePanelInfo(appState.selectedSlotIndex, curSlot);
+  
+  // Cập nhật số lượng bài học đã nhớ
+  document.getElementById("statLearnedIcons").textContent = Object.keys(appState.learnedIcons || {}).length;
+  document.getElementById("statTrainedSamples").textContent = (appState.trainedNumberErrors || []).length;
+}
+
+/* CẬP NHẬT DỮ LIỆU VÀO PANEL BÊN PHẢI */
+function updateSidePanelInfo(slotIdx, slotData) {
+  document.getElementById("sidePanelSlotIndexBadge").textContent = `Ô ${slotIdx + 1}`;
+  const img = document.getElementById("sidePanelCropImg");
+  const emptyTxt = document.getElementById("sidePanelEmptyIcon");
+  const nameInput = document.getElementById("sidePanelItemName");
+  const qtyInput = document.getElementById("sidePanelItemQty");
+  const notice = document.getElementById("sidePanelAiDetectedNotice");
+
+  // Datalist gợi ý
+  document.getElementById("knownItemsDatalist").innerHTML = KNOWN_ITEMS.map(it => `<option value="${it}"></option>`).join("");
+
+  if (slotData && slotData.cropImg) {
+    img.src = slotData.cropImg;
+    img.classList.remove("hidden");
+    emptyTxt.classList.add("hidden");
+  } else {
+    img.src = "";
+    img.classList.add("hidden");
+    emptyTxt.classList.remove("hidden");
+  }
+
+  nameInput.value = slotData?.name || "";
+  qtyInput.value = slotData?.qty || 0;
+
+  if (slotData?.aiOriginalQty && slotData.aiOriginalQty !== slotData.qty) {
+    notice.textContent = `(AI từng đọc: ${slotData.aiOriginalQty})`;
+  } else {
+    notice.textContent = "";
+  }
+}
   countLabel.textContent = `${filledCount}/30 ô có đồ`;
 }
 
