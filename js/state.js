@@ -1,13 +1,17 @@
-const STORAGE_KEY = "HKTN_INVENTORY_DATA_V4_SMART";
+// Khóa lưu rương thông thường (có thể reset/thay đổi)
+const STORAGE_CHESTS_KEY = "HKTN_CHESTS_DAILY_DATA";
+
+// KHÓA LƯU BỘ NÃO HỌC MÁY (VĨNH VIỄN - KHÔNG BAO GIỜ BỊ XÓA KHI ĐỔI CODE)
+const STORAGE_BRAIN_KEY = "HKTN_AI_BRAIN_PERMANENT";
 
 let appState = {
   apiKey: localStorage.getItem("gemini_api_key") || "",
   accounts: [],
   chests: [],
-  // 1. Lưu icon theo tên vật phẩm: { "Cánh sen": { img: "data:...", hash: "11001010..." } }
-  learnedIcons: {}, 
-  // 2. Lưu các trường hợp số bị AI đọc sai để làm mẫu prompt (Few-shot learning):
-  trainedNumberErrors: [], // [{ cropImg, wrongQty, correctQty }]
+  // Bộ não học máy:
+  learnedIcons: {},        // { "phật kinh": { img: "data:...", hash: "..." } }
+  trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
+  customKnownItems: [],    // Các tên mới thêm ngoài danh mục KNOWN_ITEMS gốc
   ignoredItems: [],
   snapshot: null,
   searchQuery: "",
@@ -18,36 +22,70 @@ let appState = {
   currentTab: "gameGrid",
   viewingAcc: "",
   viewingChest: "Rương 1",
-  selectedSlotIndex: 0 // Ô đang click chọn xem bên khung phải
+  selectedSlotIndex: 0
 };
 
+// 1. Tải dữ liệu khi mở web
 function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
+  // A. Nạp bộ não học máy vĩnh viễn trước
+  const brainSaved = localStorage.getItem(STORAGE_BRAIN_KEY);
+  if (brainSaved) {
     try {
-      const parsed = JSON.parse(saved);
-      appState.accounts = parsed.accounts || [];
-      appState.chests = parsed.chests || [];
-      appState.learnedIcons = parsed.learnedIcons || {};
-      appState.trainedNumberErrors = parsed.trainedNumberErrors || [];
-      appState.ignoredItems = parsed.ignoredItems || [];
-      appState.snapshot = parsed.snapshot || null;
+      const parsedBrain = JSON.parse(brainSaved);
+      appState.learnedIcons = parsedBrain.learnedIcons || {};
+      appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
+      appState.customKnownItems = parsedBrain.customKnownItems || [];
+      
+      // Đồng bộ tên đã học vào KNOWN_ITEMS
+      if (typeof KNOWN_ITEMS !== "undefined") {
+        appState.customKnownItems.forEach(name => {
+          if (!KNOWN_ITEMS.includes(name)) KNOWN_ITEMS.push(name);
+        });
+      }
     } catch (e) {
-      console.error(e);
+      console.error("Lỗi nạp bộ não AI:", e);
+    }
+  }
+
+  // B. Nạp rương thông thường
+  const chestsSaved = localStorage.getItem(STORAGE_CHESTS_KEY);
+  if (chestsSaved) {
+    try {
+      const parsedChests = JSON.parse(chestsSaved);
+      appState.accounts = parsedChests.accounts || [];
+      appState.chests = parsedChests.chests || [];
+      appState.ignoredItems = parsedChests.ignoredItems || [];
+      appState.snapshot = parsedChests.snapshot || null;
+    } catch (e) {
+      console.error("Lỗi nạp rương:", e);
     }
   }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+// 2. Lưu dữ liệu rương hàng ngày
+function saveChestsState() {
+  localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
     accounts: appState.accounts,
     chests: appState.chests,
-    learnedIcons: appState.learnedIcons,
-    trainedNumberErrors: appState.trainedNumberErrors,
     ignoredItems: appState.ignoredItems,
     snapshot: appState.snapshot
   }));
   renderAll();
+}
+
+// 3. LƯU BỘ NÃO HỌC MÁY (RIÊNG BIỆT - TUYỆT ĐỐI KHÔNG BỊ GHI ĐÈ BỞI RƯƠNG)
+function saveBrainState() {
+  localStorage.setItem(STORAGE_BRAIN_KEY, JSON.stringify({
+    learnedIcons: appState.learnedIcons,
+    trainedNumberErrors: appState.trainedNumberErrors,
+    customKnownItems: appState.customKnownItems
+  }));
+}
+
+// Hàm lưu tổng hợp
+function saveState() {
+  saveChestsState();
+  saveBrainState();
 }
 
 function calculateSummary() {
