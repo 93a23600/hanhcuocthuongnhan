@@ -1,45 +1,35 @@
-const STORAGE_KEY = "HKTN_INVENTORY_DATA_FULL";
+const STORAGE_KEY = "HKTN_INVENTORY_DATA_MULTI_ACC_V2";
 
 let appState = {
   apiKey: localStorage.getItem("gemini_api_key") || "",
-  accounts: ["Acc Chính", "Acc Clone 1"], // Danh sách tài khoản
-  chests: [], // Mỗi phần tử: { id, account, title: "Rương 1", slots: [] }
+  accounts: [],
+  chests: [],
   ignoredItems: [],
   snapshot: null,
   searchQuery: "",
-  selectedAccFilter: "ALL", // Lọc kho theo từng acc hoặc xem tất cả
+  selectedAccFilter: "ALL",
   showIgnored: false,
   sortBy: "qty",
   sortDesc: true,
-  currentTab: "summary",
-  editingSlot: null
+  currentTab: "summary"
 };
 
-function loadPersistedState() {
+function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      appState.accounts = parsed.accounts || ["Acc Chính", "Acc Clone 1"];
+      appState.accounts = parsed.accounts || [];
       appState.chests = parsed.chests || [];
       appState.ignoredItems = parsed.ignoredItems || [];
       appState.snapshot = parsed.snapshot || null;
     } catch (e) {
-      console.error("Lỗi đọc LocalStorage:", e);
+      console.error(e);
     }
-  }
-
-  // Khởi tạo mẫu nếu chưa có dữ liệu
-  if (!appState.chests || appState.chests.length === 0) {
-    appState.chests = [
-      { id: "c1", account: "Acc Chính", title: "Rương 1", slots: MOCK_CHESTS_DATA[0].slots },
-      { id: "c2", account: "Acc Chính", title: "Rương 2", slots: MOCK_CHESTS_DATA[1].slots },
-      { id: "c3", account: "Acc Chính", title: "Rương 3", slots: MOCK_CHESTS_DATA[2].slots }
-    ];
   }
 }
 
-function savePersistedState() {
+function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     accounts: appState.accounts,
     chests: appState.chests,
@@ -49,52 +39,30 @@ function savePersistedState() {
   renderAll();
 }
 
-function calculateInventorySummary() {
-  const summaryMap = new Map();
-
-  appState.chests.forEach((chest) => {
-    // Nếu có chọn lọc xem riêng 1 Acc
-    if (appState.selectedAccFilter !== "ALL" && chest.account !== appState.selectedAccFilter) {
-      return;
-    }
-
+function calculateSummary() {
+  const map = new Map();
+  appState.chests.forEach(chest => {
+    if (appState.selectedAccFilter !== "ALL" && chest.account !== appState.selectedAccFilter) return;
     chest.slots.forEach(slot => {
-      const name = (slot.name || "Chưa đặt tên").trim();
+      const name = slot.name || "Khác";
       const qty = parseInt(slot.qty) || 0;
-      if (!summaryMap.has(name)) {
-        summaryMap.set(name, {
-          name: name,
-          totalQty: 0,
-          stackCount: 0,
-          foundChests: new Set(),
-          isIgnored: appState.ignoredItems.includes(name)
-        });
+      if (!map.has(name)) {
+        map.set(name, { name, totalQty: 0, stacks: 0, foundIn: new Set(), isIgnored: appState.ignoredItems.includes(name) });
       }
-      const itemStat = summaryMap.get(name);
-      itemStat.totalQty += qty;
-      itemStat.stackCount += 1;
-      itemStat.foundChests.add(`${chest.account} - ${chest.title}`);
+      const item = map.get(name);
+      item.totalQty += qty;
+      item.stacks += 1;
+      item.foundIn.add(`${chest.account} (${chest.title})`);
     });
   });
 
-  let results = Array.from(summaryMap.values());
-
+  let res = Array.from(map.values());
   if (appState.searchQuery) {
-    const query = appState.searchQuery.toLowerCase();
-    results = results.filter(i => i.name.toLowerCase().includes(query));
+    res = res.filter(i => i.name.toLowerCase().includes(appState.searchQuery.toLowerCase()));
   }
-
   if (!appState.showIgnored) {
-    results = results.filter(i => !i.isIgnored);
+    res = res.filter(i => !i.isIgnored);
   }
-
-  results.sort((a, b) => {
-    if (appState.sortBy === "name") {
-      return appState.sortDesc ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
-    } else {
-      return appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty;
-    }
-  });
-
-  return results;
+  res.sort((a, b) => appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty);
+  return res;
 }
