@@ -9,7 +9,7 @@ let appState = {
   accounts: [],
   chests: [],
   // Bộ não học máy vĩnh viễn:
-  learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 },
+  learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 }, // Nhớ 4 cạnh căn chỉnh
   learnedIcons: {},        // { "phật kinh": { img: "data:...", hash: "..." } }
   trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
   customKnownItems: [],    // Danh sách tên bạn từng gõ thêm
@@ -33,12 +33,13 @@ function loadState() {
   if (brainSaved) {
     try {
       const parsedBrain = JSON.parse(brainSaved);
+      appState.learnedGridCrop = parsedBrain.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 };
       appState.learnedIcons = parsedBrain.learnedIcons || {};
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
       appState.customKnownItems = parsedBrain.customKnownItems || [];
       
       // Đồng bộ tên đã học vào danh mục chuẩn KNOWN_ITEMS
-      if (typeof KNOWN_ITEMS !== "undefined") {
+      if (typeof KNOWN_ITEMS !== "undefined" && Array.isArray(KNOWN_ITEMS)) {
         appState.customKnownItems.forEach(name => {
           if (!KNOWN_ITEMS.includes(name)) KNOWN_ITEMS.push(name);
         });
@@ -58,7 +59,6 @@ function loadState() {
       appState.ignoredItems = parsedChests.ignoredItems || [];
       appState.snapshot = parsedChests.snapshot || null;
       
-      // Đặt giá trị acc đang xem mặc định nếu có
       if (appState.accounts.length > 0 && !appState.viewingAcc) {
         appState.viewingAcc = appState.accounts[0];
       }
@@ -79,11 +79,16 @@ function saveChestsState() {
     }));
   } catch (err) {
     console.warn("Cảnh báo: Bộ nhớ rương bị đầy, đang tối ưu lược bớt ảnh cũ...", err);
-    // Nếu đầy, lọc bớt cropImg trong các rương cũ, chỉ giữ tên và số lượng
     try {
+      // Nếu bộ nhớ đầy: bỏ cropImg ở các rương cũ, chỉ giữ tên và số lượng (ảnh vẫn lấy từ learnedIcons ra hiển thị)
       const slimChests = appState.chests.map(c => ({
         ...c,
-        slots: (c.slots || []).map(s => ({ name: s.name, qty: s.qty, cropImg: s.cropImg }))
+        slots: (c.slots || []).map(s => ({ 
+          name: s.name, 
+          qty: s.qty, 
+          cropImg: null, 
+          aiOriginalQty: s.aiOriginalQty 
+        }))
       }));
       localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
         accounts: appState.accounts,
@@ -92,7 +97,7 @@ function saveChestsState() {
         snapshot: appState.snapshot
       }));
     } catch (e) {
-      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' để sao lưu dữ liệu.");
+      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' để sao lưu.");
     }
   }
 
@@ -105,6 +110,7 @@ function saveChestsState() {
 function saveBrainState() {
   try {
     localStorage.setItem(STORAGE_BRAIN_KEY, JSON.stringify({
+      learnedGridCrop: appState.learnedGridCrop, // Lưu tỷ lệ căn lề 4 cạnh
       learnedIcons: appState.learnedIcons,
       trainedNumberErrors: appState.trainedNumberErrors,
       customKnownItems: appState.customKnownItems
