@@ -8,63 +8,72 @@ window.toggleIgnoreItem = function(name) {
     appState.ignoredItems.push(name);
     showToast(`Đã bỏ qua [${name}]`, "info");
   }
-  saveState();
+  saveChestsState();
 };
 
 window.addEventListener("DOMContentLoaded", () => {
   loadState();
   updateApiKeyUI();
 
-  // 1. Nhận sự kiện Ctrl + V dán ảnh
+  // 1. Phím Ctrl + V dán ảnh toàn trang
   window.addEventListener("paste", (e) => {
-    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    const items = (e.clipboardData || window.clipboardData)?.items;
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) {
+        const file = items[i].getAsFile();
+        if (file) {
           e.preventDefault();
-          handleIncomingFile(blob);
+          handleIncomingFile(file);
           break;
         }
       }
     }
   });
 
-  // 2. Chọn tệp & Kéo thả
+  // 2. Chọn tệp & Vùng Kéo thả
   const fileInput = document.getElementById("fileInput");
   const btnBrowse = document.getElementById("btnBrowseFile");
   const dropZone = document.getElementById("dropZone");
 
   if (btnBrowse && fileInput) {
-    btnBrowse.addEventListener("click", (e) => {
+    btnBrowse.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
       fileInput.click();
-    });
+    };
+  }
+
+  if (fileInput) {
+    fileInput.onchange = function(e) {
+      if (e.target.files && e.target.files[0]) {
+        handleIncomingFile(e.target.files[0]);
+      }
+      fileInput.value = "";
+    };
   }
 
   if (dropZone) {
     dropZone.addEventListener("click", () => dropZone.focus());
-    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drop-active"); });
-    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drop-active"));
-    dropZone.addEventListener("drop", (e) => {
+    dropZone.ondragover = function(e) {
+      e.preventDefault();
+      dropZone.classList.add("drop-active");
+    };
+    dropZone.ondragleave = function() {
+      dropZone.classList.remove("drop-active");
+    };
+    dropZone.ondrop = function(e) {
       e.preventDefault();
       dropZone.classList.remove("drop-active");
-      if (e.dataTransfer?.files?.[0]) handleIncomingFile(e.dataTransfer.files[0]);
-    });
-  }
-
-  if (fileInput) {
-    fileInput.addEventListener("change", (e) => {
-      if (e.target.files?.[0]) handleIncomingFile(e.target.files[0]);
-      fileInput.value = "";
-    });
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleIncomingFile(e.dataTransfer.files[0]);
+      }
+    };
   }
 
   // 3. Chọn Rương 1 2 3 trên Popup nạp ảnh
   document.querySelectorAll(".btn-chest-num").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.onclick = function() {
       document.querySelectorAll(".btn-chest-num").forEach(b => {
         b.classList.remove("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
         b.classList.add("bg-slate-800", "text-slate-300");
@@ -74,24 +83,24 @@ window.addEventListener("DOMContentLoaded", () => {
       selectedChestNum = btn.dataset.num;
       const customInput = document.getElementById("customChestInput");
       if (customInput) customInput.classList.add("hidden");
-    });
+    };
   });
 
   const btnCustomChest = document.getElementById("btnCustomChestNum");
   if (btnCustomChest) {
-    btnCustomChest.addEventListener("click", () => {
+    btnCustomChest.onclick = function() {
       const input = document.getElementById("customChestInput");
       if (input) {
         input.classList.remove("hidden");
         input.focus();
       }
-    });
+    };
   }
 
-  // 4. Bấm "Cập Nhật Rương"
+  // 4. Bấm "Cập Nhật Rương" trên Popup
   const btnConfirm = document.getElementById("btnConfirmUpload");
   if (btnConfirm) {
-    btnConfirm.addEventListener("click", () => {
+    btnConfirm.onclick = function() {
       const accInput = document.getElementById("inputAccountName");
       const accName = accInput ? accInput.value.trim() : "";
       if (!accName) {
@@ -109,7 +118,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const modal = document.getElementById("confirmUploadModal");
       if (modal) modal.classList.add("hidden");
       executeUpload(accName, chestTitle);
-    });
+    };
   }
 
   const closeUploadPopup = () => {
@@ -120,10 +129,10 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   const btnCancel = document.getElementById("btnCancelUpload");
   const btnDismiss = document.getElementById("btnDismissUpload");
-  if (btnCancel) btnCancel.addEventListener("click", closeUploadPopup);
-  if (btnDismiss) btnDismiss.addEventListener("click", closeUploadPopup);
+  if (btnCancel) btnCancel.onclick = closeUploadPopup;
+  if (btnDismiss) btnDismiss.onclick = closeUploadPopup;
 
-  // 1. Khi bạn lưu tên mới (Ví dụ đổi thành "phật kinh")
+  // 5. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.onclick = async function() {
@@ -147,12 +156,14 @@ window.addEventListener("DOMContentLoaded", () => {
         aiOriginalQty: targetSlot.aiOriginalQty || newQty
       };
 
-      // NẠP VĨNH VIỄN VÀO BỘ NÃO AI
       if (newName && targetSlot.cropImg) {
         const hash = await computeImageHash(targetSlot.cropImg);
         
-        // Ghi vào não bộ
+        // Lưu vào não bộ vĩnh viễn
+        if (!appState.learnedIcons) appState.learnedIcons = {};
         appState.learnedIcons[newName] = { img: targetSlot.cropImg, hash: hash };
+        
+        if (!appState.customKnownItems) appState.customKnownItems = [];
         if (!appState.customKnownItems.includes(newName)) {
           appState.customKnownItems.push(newName);
         }
@@ -160,7 +171,7 @@ window.addEventListener("DOMContentLoaded", () => {
           KNOWN_ITEMS.push(newName);
         }
 
-        // Tự động đổi tất cả các ô cùng icon trong rương này
+        // Tự động đổi tất cả các ô có cùng icon trong rương hiện tại
         let count = 1;
         for (let i = 0; i < 30; i++) {
           if (i === idx) continue;
@@ -174,9 +185,9 @@ window.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        saveBrainState();  // Lưu ngay vào kho não vĩnh viễn
+        saveBrainState();  // Lưu não
         saveChestsState(); // Cập nhật rương
-        showToast(`Đã ghi nhớ vĩnh viễn [${newName}] và cập nhật ${count} ô trùng!`, "success");
+        showToast(`Đã lưu vĩnh viễn [${newName}] và đồng bộ ${count} ô cùng icon!`, "success");
       } else {
         saveChestsState();
         showToast(`Đã cập nhật ô ${idx + 1}!`, "success");
@@ -184,7 +195,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 2. Khi dạy AI số lượng đúng
+  // 6. Dạy AI Số Đúng (Chỉ 1 sự kiện duy nhất)
   const btnTrain = document.getElementById("btnTrainAiWrongNumber");
   if (btnTrain) {
     btnTrain.onclick = function() {
@@ -195,52 +206,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (!slot) return;
 
       const wrongQty = slot.qty;
-      const correctInput = prompt(`AI nhận diện là [${wrongQty}]. Nhập số CHÍNH XÁC để dạy AI:`, wrongQty);
-
-      if (correctInput !== null && correctInput.trim() !== "") {
-        const correctVal = parseInt(correctInput.trim()) || 0;
-        slot.qty = correctVal;
-
-        // Lưu vĩnh viễn vào kho lỗi để AI bám theo học
-        appState.trainedNumberErrors.push({
-          wrongQty: wrongQty,
-          correctQty: correctVal,
-          itemName: slot.name || "Không rõ"
-        });
-
-        saveBrainState();  // Lưu ngay vào kho não
-        saveChestsState();
-        showToast(`Đã nạp quy tắc đọc số [${wrongQty} -> ${correctVal}] vào bộ nhớ AI vĩnh viễn!`, "success");
-      }
-    };
-  }
-
-  // 3. NÚT XÓA HẾT DỮ LIỆU: Chỉ xóa ảnh rương, GIỮ NGUYÊN BỘ NÃO ĐÃ HỌC
-  const btnReset = document.getElementById("btnResetAll");
-  if (btnReset) {
-    btnReset.onclick = function() {
-      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
-        localStorage.removeItem(STORAGE_CHESTS_KEY); // Chỉ xóa rương
-        appState.chests = [];
-        appState.accounts = [];
-        saveChestsState();
-        location.reload();
-      }
-    };
-  }
-
-  // 6. Dạy AI Học Lại Số Này
-  const btnTrain = document.getElementById("btnTrainAiWrongNumber");
-  if (btnTrain) {
-    btnTrain.addEventListener("click", () => {
-      const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
-      if (!chest) return;
-      const idx = appState.selectedSlotIndex;
-      const slot = chest.slots ? chest.slots[idx] : null;
-      if (!slot) return;
-
-      const wrongQty = slot.qty;
-      const correctInput = prompt(`AI đang nhận diện số này là [${wrongQty}]. Nhập con số CHÍNH XÁC trong game để dạy AI:`, wrongQty);
+      const correctInput = prompt(`AI nhận diện ô này là [${wrongQty}]. Nhập số CHÍNH XÁC trong game để dạy AI:`, wrongQty);
 
       if (correctInput !== null && correctInput.trim() !== "") {
         const correctVal = parseInt(correctInput.trim()) || 0;
@@ -253,50 +219,51 @@ window.addEventListener("DOMContentLoaded", () => {
           itemName: slot.name || "Không rõ"
         });
 
-        saveState();
-        showToast(`Đã ghi nhớ: [${wrongQty} -> ${correctVal}]. Lần sau AI sẽ đọc chuẩn hơn!`, "success");
+        saveBrainState();  // Lưu não vĩnh viễn
+        saveChestsState(); // Cập nhật rương
+        showToast(`Đã nạp quy tắc số [${wrongQty} -> ${correctVal}] vào bộ nhớ AI!`, "success");
       }
-    });
+    };
   }
 
   // 7. Làm rỗng ô
   const btnEmptySide = document.getElementById("btnSidePanelEmptySlot");
   if (btnEmptySide) {
-    btnEmptySide.addEventListener("click", () => {
+    btnEmptySide.onclick = function() {
       const chest = appState.chests.find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
       if (!chest) return;
       const idx = appState.selectedSlotIndex;
-      if (chest.slots) {
+      if (chest.slots && chest.slots[idx]) {
         chest.slots[idx] = { name: null, qty: 0, cropImg: null };
       }
-      saveState();
+      saveChestsState();
       showToast(`Đã làm rỗng ô ${idx + 1}`, "info");
-    });
+    };
   }
 
   // 8. Chuyển Acc & Rương đang xem
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc) {
-    selectAcc.addEventListener("change", (e) => {
+    selectAcc.onchange = function(e) {
       appState.viewingAcc = e.target.value;
       appState.selectedSlotIndex = 0;
       renderAll();
-    });
+    };
   }
 
   document.querySelectorAll(".btn-view-chest").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.onclick = function() {
       document.querySelectorAll(".btn-view-chest").forEach(b => {
-        b.className = "btn-view-chest px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold";
+        b.className = "btn-view-chest px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold";
       });
-      btn.className = "btn-view-chest px-3 py-1.5 rounded-lg border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold";
+      btn.className = "btn-view-chest px-2.5 py-1 rounded-lg border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold";
       appState.viewingChest = btn.dataset.title;
       appState.selectedSlotIndex = 0;
       renderAll();
-    });
+    };
   });
 
-  // 9. Chuyển Tabs
+  // 9. Chuyển Tab (Rương Game / Tổng Kho / Biến Động)
   const tabGameGridBtn = document.getElementById("tabGameGridBtn");
   const tabSummaryBtn = document.getElementById("tabSummaryBtn");
   const tabDiffBtn = document.getElementById("tabDiffBtn");
@@ -323,80 +290,136 @@ window.addEventListener("DOMContentLoaded", () => {
       if (tabDiffView) tabDiffView.classList.remove("hidden");
     }
     appState.currentTab = tab;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
   }
 
-  if (tabGameGridBtn) tabGameGridBtn.addEventListener("click", () => setTab("gameGrid"));
-  if (tabSummaryBtn) tabSummaryBtn.addEventListener("click", () => setTab("summary"));
-  if (tabDiffBtn) tabDiffBtn.addEventListener("click", () => setTab("diff"));
+  if (tabGameGridBtn) tabGameGridBtn.onclick = () => setTab("gameGrid");
+  if (tabSummaryBtn) tabSummaryBtn.onclick = () => setTab("summary");
+  if (tabDiffBtn) tabDiffBtn.onclick = () => setTab("diff");
 
-  // 10. Bộ lọc
+  // 10. Bộ lọc Acc & Tìm kiếm
   const filterAcc = document.getElementById("filterAccountSelect");
   if (filterAcc) {
-    filterAcc.addEventListener("change", (e) => {
+    filterAcc.onchange = (e) => {
       appState.selectedAccFilter = e.target.value;
       renderAll();
-    });
+    };
   }
 
   const searchInp = document.getElementById("searchInput");
   if (searchInp) {
-    searchInp.addEventListener("input", (e) => {
+    searchInp.oninput = (e) => {
       appState.searchQuery = e.target.value.trim();
       renderAll();
-    });
+    };
   }
 
   // 11. Snapshot
   const btnSnap = document.getElementById("btnCreateSnapshot");
   if (btnSnap) {
-    btnSnap.addEventListener("click", () => {
+    btnSnap.onclick = () => {
       const snap = {};
       appState.chests.forEach(c => (c.slots || []).forEach(s => {
         if (s && s.name) snap[s.name] = (snap[s.name] || 0) + (parseInt(s.qty) || 0);
       }));
       appState.snapshot = snap;
-      saveState();
+      saveChestsState();
       showToast("Đã lưu mốc snapshot đối chiếu thành công!", "success");
-    });
+    };
   }
 
   const btnClearSnap = document.getElementById("btnClearSnapshot");
   if (btnClearSnap) {
-    btnClearSnap.addEventListener("click", () => {
+    btnClearSnap.onclick = () => {
       if (confirm("Xoá mốc so sánh hiện tại?")) {
         appState.snapshot = null;
-        saveState();
+        saveChestsState();
         showToast("Đã xoá mốc so sánh", "info");
       }
-    });
+    };
   }
 
   // 12. Copy Bảng
   const btnCopy = document.getElementById("btnCopyTable");
   if (btnCopy) {
-    btnCopy.addEventListener("click", () => {
+    btnCopy.onclick = () => {
       const summary = calculateSummary();
       let content = "Tên Vật Phẩm\tSố Ô\tTổng Số Lượng\n";
       summary.forEach(i => content += `${i.name}\t${i.stacks}\t${i.totalQty}\n`);
       navigator.clipboard.writeText(content).then(() => {
         showToast("Đã sao chép bảng ra bộ nhớ tạm!", "success");
       });
-    });
+    };
   }
 
-  // 13. Reset tất cả
+  // 13. NÚT RESET: CHỈ XÓA RƯƠNG HÀNG NGÀY, GIỮ BỘ NÃO AI HỌC MÁY
   const btnReset = document.getElementById("btnResetAll");
   if (btnReset) {
-    btnReset.addEventListener("click", () => {
-      if (confirm("Cảnh báo: Toàn bộ dữ liệu rương và bộ nhớ icon sẽ bị xoá sạch. Tiếp tục?")) {
-        localStorage.removeItem(STORAGE_KEY);
+    btnReset.onclick = function() {
+      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
+        localStorage.removeItem(STORAGE_CHESTS_KEY);
+        appState.chests = [];
+        appState.accounts = [];
+        saveChestsState();
         location.reload();
       }
-    });
+    };
   }
 
-  // 14. Modal API
+  // 14. XUẤT BỘ NÃO AI RA FILE JSON VỀ MÁY TÍNH
+  const btnExportBrain = document.getElementById("btnExportBrain");
+  if (btnExportBrain) {
+    btnExportBrain.onclick = () => {
+      const brainData = {
+        learnedIcons: appState.learnedIcons,
+        trainedNumberErrors: appState.trainedNumberErrors,
+        customKnownItems: appState.customKnownItems,
+        exportedAt: new Date().toLocaleString('vi-VN')
+      };
+      const count = Object.keys(appState.learnedIcons || {}).length;
+      const blob = new Blob([JSON.stringify(brainData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bo_nao_kiem_kho_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Đã xuất file não bộ (${count} icon đã học)!`, "success");
+    };
+  }
+
+  // 15. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT
+  const inputImportBrain = document.getElementById("inputImportBrain");
+  if (inputImportBrain) {
+    inputImportBrain.onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported.learnedIcons) {
+            appState.learnedIcons = Object.assign({}, appState.learnedIcons, imported.learnedIcons);
+            appState.trainedNumberErrors = (appState.trainedNumberErrors || []).concat(imported.trainedNumberErrors || []);
+            appState.customKnownItems = Array.from(new Set([...(appState.customKnownItems || []), ...(imported.customKnownItems || [])]));
+            
+            saveBrainState();
+            renderAll();
+            showToast(`Nạp não thành công! Hiện có ${Object.keys(appState.learnedIcons).length} icon trong bộ nhớ.`, "success");
+          } else {
+            alert("File không đúng định dạng não bộ của tool!");
+          }
+        } catch (err) {
+          alert("Lỗi đọc file JSON: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      inputImportBrain.value = "";
+    };
+  }
+
+  // 16. Modal API Key
   const configModal = document.getElementById("configModal");
   const inputApiKey = document.getElementById("inputApiKey");
   const btnOpenCfg = document.getElementById("btnOpenConfig");
@@ -405,35 +428,35 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnClearKey = document.getElementById("btnClearApiKey");
 
   if (btnOpenCfg && configModal && inputApiKey) {
-    btnOpenCfg.addEventListener("click", () => {
+    btnOpenCfg.onclick = () => {
       inputApiKey.value = appState.apiKey;
       configModal.classList.remove("hidden");
-    });
+    };
   }
   if (btnCloseCfg && configModal) {
-    btnCloseCfg.addEventListener("click", () => configModal.classList.add("hidden"));
+    btnCloseCfg.onclick = () => configModal.classList.add("hidden");
   }
   if (btnSaveKey && inputApiKey && configModal) {
-    btnSaveKey.addEventListener("click", () => {
+    btnSaveKey.onclick = () => {
       const key = inputApiKey.value.trim();
       appState.apiKey = key;
       localStorage.setItem("gemini_api_key", key);
       configModal.classList.add("hidden");
       updateApiKeyUI();
       showToast(key ? "Đã lưu API Key!" : "Đã chuyển về Demo", "success");
-    });
+    };
   }
   if (btnClearKey && inputApiKey && configModal) {
-    btnClearKey.addEventListener("click", () => {
+    btnClearKey.onclick = () => {
       inputApiKey.value = "";
       appState.apiKey = "";
       localStorage.removeItem("gemini_api_key");
       configModal.classList.add("hidden");
       updateApiKeyUI();
       showToast("Đã xoá API Key", "info");
-    });
+    };
   }
 
   renderAll();
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 });
