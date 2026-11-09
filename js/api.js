@@ -3,7 +3,7 @@ let currentCropRatios = { top: 0, bottom: 0, left: 0, right: 0 };
 let pendingImage = null;
 let pendingCrops = [];
 
-// 1. Hàm tính mã băm hình ảnh 64-bit (DHash)
+// 1. Tính mã băm hình ảnh 64-bit (DHash)
 function computeImageHash(imgDataUrl) {
   return new Promise((resolve) => {
     if (!imgDataUrl) return resolve("");
@@ -46,7 +46,7 @@ function getHammingDistance(h1, h2) {
   return diff;
 }
 
-// 2. Nhận diện file ảnh từ Paste hoặc File Input -> Mở Modal Căn Chỉnh Khung
+// 2. Nhận file ảnh
 function handleIncomingFile(file) {
   if (!file || !file.type || !file.type.startsWith("image/")) {
     alert("Vui lòng chọn hoặc dán đúng tệp hình ảnh!");
@@ -59,7 +59,6 @@ function handleIncomingFile(file) {
     const img = new Image();
     img.onload = () => {
       pendingRawImg = img;
-      // Nạp thông số lề 4 cạnh đã học từ bộ não vĩnh viễn (nếu chưa có thì để 0)
       currentCropRatios = Object.assign({}, appState.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 });
       openCalibrateModal();
     };
@@ -69,7 +68,7 @@ function handleIncomingFile(file) {
   reader.readAsDataURL(file);
 }
 
-// 3. Mở Modal Căn Chỉnh và hiển thị lưới 5x6 đè lên ảnh
+// 3. Mở Modal Căn Chỉnh Khung (5x7)
 function openCalibrateModal() {
   const modal = document.getElementById("cropCalibrateModal");
   if (!modal || !pendingRawImg) return;
@@ -102,7 +101,7 @@ function updateRangeLabels() {
   if (elRight) elRight.textContent = `${currentCropRatios.right}%`;
 }
 
-// Vẽ trực tiếp lên Canvas căn chỉnh
+// 4. Vẽ lưới 5 CỘT x 7 HÀNG (35 Ô)
 function drawCalibrateGrid() {
   const canvas = document.getElementById("calibrateCanvas");
   if (!canvas || !pendingRawImg) return;
@@ -118,25 +117,25 @@ function drawCalibrateGrid() {
   const w = Math.max(1, canvas.width - x - ((currentCropRatios.right / 100) * canvas.width));
   const h = Math.max(1, canvas.height - y - ((currentCropRatios.bottom / 100) * canvas.height));
 
-  // Vùng lề tối bao quanh
-  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  // Vùng tối che viền ngoài
+  ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
   ctx.fillRect(0, 0, canvas.width, y);
   ctx.fillRect(0, y + h, canvas.width, canvas.height - (y + h));
   ctx.fillRect(0, y, x, h);
   ctx.fillRect(x + w, y, canvas.width - (x + w), h);
 
-  // Viền ngoài khung rương
+  // Khung viền ngoài
   ctx.strokeStyle = "#10b981";
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, w, h);
 
-  // Kẻ lưới 5 cột x 6 hàng
-  ctx.strokeStyle = "rgba(52, 211, 153, 0.75)";
+  // Kẻ lưới chuẩn 5 CỘT x 7 HÀNG
+  ctx.strokeStyle = "rgba(52, 211, 153, 0.8)";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 3]);
 
   const stepX = w / 5;
-  const stepY = h / 6;
+  const stepY = h / 7; // Chia cho 7 hàng
 
   for (let c = 1; c < 5; c++) {
     ctx.beginPath();
@@ -144,7 +143,7 @@ function drawCalibrateGrid() {
     ctx.lineTo(x + c * stepX, y + h);
     ctx.stroke();
   }
-  for (let r = 1; r < 6; r++) {
+  for (let r = 1; r < 7; r++) { // 7 hàng kẻ 6 đường ngang
     ctx.beginPath();
     ctx.moveTo(x, y + r * stepY);
     ctx.lineTo(x + w, y + r * stepY);
@@ -153,7 +152,7 @@ function drawCalibrateGrid() {
   ctx.setLineDash([]);
 }
 
-// 4. Cắt chính xác 30 ô rương theo khung viền % đã căn chỉnh
+// 5. Cắt chính xác đúng 35 Ô (5 cột x 7 hàng)
 function sliceGridWithRatios(imgElement, ratios) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -167,13 +166,13 @@ function sliceGridWithRatios(imgElement, ratios) {
   const activeH = totalH - startY - ((ratios.bottom / 100) * totalH);
 
   const stepX = activeW / 5;
-  const stepY = activeH / 6;
+  const stepY = activeH / 7; // Chia 7 hàng
 
   const crops = [];
   canvas.width = 90;
   canvas.height = 90;
 
-  for (let r = 0; r < 6; r++) {
+  for (let r = 0; r < 7; r++) {
     for (let c = 0; c < 5; c++) {
       ctx.clearRect(0, 0, 90, 90);
       const srcX = startX + c * stepX;
@@ -186,19 +185,19 @@ function sliceGridWithRatios(imgElement, ratios) {
   return crops;
 }
 
-// 5. Gọi Gemini Vision với bộ nhớ lỗi số lượng
+// 6. Gửi Gemini Vision trích xuất đúng 35 Ô
 async function analyzeChestWithGemini(base64Image) {
   let trainingPromptNotes = "";
   if (appState.trainedNumberErrors && appState.trainedNumberErrors.length > 0) {
     const errorExamples = appState.trainedNumberErrors.slice(-5).map(e => 
-      `- Font số game này hay bị nhầm: nếu số nhìn giống "${e.wrongQty}" thì lưu ý kiểm tra kỹ lại, số đúng là "${e.correctQty}".`
+      `- Font số game này hay bị nhầm: nếu số nhìn giống "${e.wrongQty}" thì số đúng là "${e.correctQty}".`
     ).join("\n");
     trainingPromptNotes = `\nCÁC KINH NGHIỆM ĐỌC SỐ ĐÃ HỌC:\n${errorExamples}\nHãy đọc thật kỹ số lượng góc dưới bên phải.\n`;
   }
 
-  const prompt = `Trích xuất tất cả 30 ô theo thứ tự từ trái qua phải, từ trên xuống dưới của lưới rương 5 cột x 6 hàng.
+  const prompt = `Trích xuất tất cả đúng 35 ô theo thứ tự từ trái qua phải, từ trên xuống dưới của lưới rương 5 cột x 7 hàng.
 Danh mục tên vật phẩm chuẩn: ${JSON.stringify(KNOWN_ITEMS)}.${trainingPromptNotes}
-Trả về đúng mảng JSON 30 phần tử tương ứng với 30 ô (nếu ô trống thì ghi name là null, qty là 0):
+Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô (nếu ô trống thì ghi name là null, qty là 0):
 [
   {"name": "Tên vật phẩm", "qty": 999},
   {"name": null, "qty": 0}
@@ -222,12 +221,12 @@ Trả về đúng mảng JSON 30 phần tử tương ứng với 30 ô (nếu ô
   return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 
-// 6. Thực thi nạp rương sau khi xác nhận tên tài khoản
+// 7. Thực thi nạp rương 35 ô
 async function executeUpload(accountName, chestTitle) {
   if (!pendingImage) return;
   const badge = document.getElementById("readingBadge");
   if (badge) badge.classList.remove("hidden");
-  showToast(`Đang đối chiếu icon và đọc rương [${accountName} - ${chestTitle}]...`, "info");
+  showToast(`Đang phân tích rương 35 ô [${accountName} - ${chestTitle}]...`, "info");
 
   try {
     let aiSlots = [];
@@ -235,19 +234,18 @@ async function executeUpload(accountName, chestTitle) {
       aiSlots = await analyzeChestWithGemini(pendingImage.base64);
     } else {
       await new Promise(r => setTimeout(r, 600));
-      aiSlots = Array.from({ length: 30 }, (_, i) => ({
-        name: i < 10 ? (KNOWN_ITEMS[i] || "Vật phẩm") : null,
-        qty: i < 10 ? 999 : 0
+      aiSlots = Array.from({ length: 35 }, (_, i) => ({
+        name: i < 15 ? (KNOWN_ITEMS[i] || "Vật phẩm") : null,
+        qty: i < 15 ? 999 : 0
       }));
     }
 
     const finalSlots = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 35; i++) {
       const crop = pendingCrops[i] || null;
       let assignedName = aiSlots[i]?.name || null;
       let assignedQty = aiSlots[i]?.qty || 0;
 
-      // So khớp mã băm với kho icon đã học
       if (crop && appState.learnedIcons) {
         const cropHash = await computeImageHash(crop);
         let bestMatchName = null;
@@ -295,7 +293,7 @@ async function executeUpload(accountName, chestTitle) {
     appState.selectedSlotIndex = 0;
 
     saveChestsState();
-    showToast(`Đã nạp xong rương [${accountName} - ${chestTitle}]!`, "success");
+    showToast(`Đã nạp xong rương [${accountName} - ${chestTitle}] (35 ô)!`, "success");
   } catch (err) {
     showToast("Lỗi phân tích: " + err.message, "error");
   } finally {
