@@ -1,357 +1,55 @@
-<!DOCTYPE html>
-<html lang="vi" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trợ Lý Kiểm Kho Game - Auto Inventory Auditor</title>
-  
-  <!-- CDN Thư viện -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Tailwind config & Custom Style -->
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            brand: {
-              50: '#ecfdf5', 500: '#10b981', 600: '#059669',
-              700: '#047857', 800: '#065f46', 900: '#064e3b',
-            },
-            game: {
-              panel: '#151d28', card: '#1e293b', slot: '#0f172a', accent: '#f59e0b',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-[#0b0f17] text-slate-200 min-h-screen font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white">
-
-  <!-- Header Bar -->
-  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30 text-white font-black text-xl">
-          <i data-lucide="package-search" class="w-6 h-6"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-lg font-bold tracking-tight text-white">Kiểm Kho Game AI</h1>
-            <span class="text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Vision Auditor</span>
-          </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Chụp ảnh màn hình rương &bull; Dán (Ctrl+V) &bull; Tự động cộng dồn số lượng</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2.5">
-        <button id="btnLoadMock" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition shadow-sm">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-          <span>Nạp 4 Rương Mẫu</span>
-        </button>
-        <button id="btnOpenChestManager" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-          <i data-lucide="folder-cog" class="w-3.5 h-3.5 text-sky-400"></i>
-          <span>Quản Lý Rương</span>
-        </button>
-        <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-          <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
-          <span id="apiKeyLabel">Cài đặt API</span>
-        </button>
-        <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/40 transition">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-    <!-- Upload & Paste Zone -->
-    <section class="bg-game-card border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-      <div class="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div class="flex flex-col md:flex-row gap-5 items-stretch">
-        <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition group focus:outline-none focus:border-emerald-500">
-          <input type="file" id="fileInput" accept="image/*" multiple class="hidden" />
-          <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
-            <i data-lucide="image-plus" class="w-7 h-7"></i>
-          </div>
-          <h3 class="font-semibold text-white text-base">Thả ảnh rương vào đây hoặc <span class="text-emerald-400 underline underline-offset-2">chọn tệp</span></h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-md">
-            Mẹo tiện nhất: Nhấn <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-mono">Ctrl + V</kbd> ở bất kỳ đâu để nạp ngay ảnh rương đang chọn!
-          </p>
-          <div class="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] text-slate-400">
-            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Hỗ trợ PNG, JPG, WebP</span>
-            <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Quét 30 ô cùng lúc</span>
-            <span id="readingBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold animate-pulse">
-              <i data-lucide="loader-2" class="w-3 h-3 inline animate-spin"></i> Đang đọc dữ liệu ảnh...
-            </span>
-          </div>
-        </div>
-
-        <div class="w-full md:w-80 bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between text-xs">
-              <label class="text-slate-300 font-bold uppercase tracking-wider">Đích Nạp Ảnh:</label>
-              <button id="btnQuickAddChest" title="Thêm nhanh rương mới" class="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold text-xs">
-                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Thêm rương (+)
-              </button>
-            </div>
-            <select id="targetChestSelect" class="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-medium"></select>
-            <p class="text-[11px] text-slate-500">Ảnh thả hoặc Ctrl+V sẽ nạp đè vào rương đang được chọn này.</p>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800">
-            <div class="flex items-center justify-between text-xs mb-1.5">
-              <span class="text-slate-400 font-medium">Chế độ phân tích:</span>
-              <span id="modeBadge" class="badge-amber text-xs px-2 py-0.5 rounded-full font-semibold">Chế độ Demo</span>
-            </div>
-            <p id="modeDesc" class="text-[11px] text-slate-400 leading-relaxed">Bạn chưa thiết lập Gemini API Key.</p>
-          </div>
-
-          <div class="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
-            <div class="flex justify-between text-slate-400">
-              <span>Số rương hiện có:</span>
-              <strong id="statChestsCount" class="text-white">0</strong>
-            </div>
-            <div class="flex justify-between text-slate-400">
-              <span>Số loại đang theo dõi:</span>
-              <strong id="statUniqueItems" class="text-emerald-400">0</strong>
-            </div>
-            <div class="flex justify-between text-slate-400">
-              <span>Tổng lượng tồn kho:</span>
-              <strong id="statTotalItems" class="text-amber-400 font-bold">0</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Content Tabs & Filters -->
-    <section class="space-y-4">
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
-          <button id="tabSummaryBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
-            <i data-lucide="layout-grid" class="w-4 h-4"></i>
-            <span>Tổng Hợp Toàn Kho</span>
-          </button>
-          <button id="tabChestsBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
-            <i data-lucide="archive" class="w-4 h-4"></i>
-            <span>Chi Tiết Từng Rương (<span id="chestTabCount">0</span>)</span>
-          </button>
-          <button id="tabDiffBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
-            <i data-lucide="trending-up-down" class="w-4 h-4 text-amber-400"></i>
-            <span>Biến Động Hao / Đầy</span>
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2 flex-wrap">
-          <div class="relative flex-1 sm:w-56 min-w-[160px]">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="searchInput" placeholder="Tìm vật phẩm..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition">
-          </div>
-
-          <label class="text-xs text-slate-400 flex items-center gap-1 cursor-pointer select-none bg-slate-900 px-2.5 py-1.5 border border-slate-800 rounded-lg">
-            <input type="checkbox" id="chkShowIgnored" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0"> 
-            <span>Hiện item bỏ qua</span>
-          </label>
-
-          <button id="btnExportCSV" title="Xuất CSV" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span class="hidden sm:inline">CSV</span>
-          </button>
-          <button id="btnCopyTable" title="Sao chép bảng để dán vào Excel / Google Sheets" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-            <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span class="hidden sm:inline">Sao Chép</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- TAB 1: SUMMARY DASHBOARD -->
-      <div id="tabSummaryView" class="space-y-4">
-        <div class="bg-game-card border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr class="bg-slate-900/90 border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                  <th class="py-3 px-4 w-12 text-center">#</th>
-                  <th class="py-3 px-4 cursor-pointer hover:text-white transition" id="sortByName">
-                    <div class="flex items-center gap-1.5">Tên Vật Phẩm <i data-lucide="arrow-up-down" class="w-3 h-3"></i></div>
-                  </th>
-                  <th class="py-3 px-4 text-center">Số Ô Chiếm (Stacks)</th>
-                  <th class="py-3 px-4 text-center">Các Rương Xuất Hiện</th>
-                  <th class="py-3 px-4 text-right cursor-pointer hover:text-white transition" id="sortByQty">
-                    <div class="flex items-center justify-end gap-1.5">Tổng Số Lượng <i data-lucide="arrow-down" class="w-3 h-3 text-emerald-400"></i></div>
-                  </th>
-                  <th class="py-3 px-4 text-center w-36">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-slate-300 text-xs sm:text-sm"></tbody>
-            </table>
-          </div>
-
-          <div id="emptySummaryNotice" class="py-16 text-center text-slate-500 space-y-2">
-            <i data-lucide="box" class="w-12 h-12 mx-auto text-slate-600 mb-2"></i>
-            <p class="text-sm font-medium">Chưa có dữ liệu rương nào.</p>
-            <p class="text-xs text-slate-500">Chụp ảnh màn hình rương trong game và dán (Ctrl+V) hoặc ấn "Nạp 4 Rương Mẫu" để trải nghiệm thử.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 2: DETAILED CHESTS VIEW -->
-      <div id="tabChestsView" class="hidden space-y-6">
-        <div id="chestsContainer" class="space-y-6"></div>
-        <div id="emptyChestNotice" class="bg-game-card border border-slate-800 rounded-2xl p-12 text-center text-slate-500 space-y-2">
-          <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-600"></i>
-          <p class="text-sm font-medium">Chưa có rương nào được thêm vào danh sách.</p>
-        </div>
-      </div>
-
-      <!-- TAB 3: BIẾN ĐỘNG HAO / ĐẦY (DIFF VIEW) -->
-      <div id="tabDiffView" class="hidden space-y-4">
-        <div class="bg-game-card border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i data-lucide="git-compare" class="w-4 h-4 text-emerald-400"></i>
-              <span>So Sánh Biến Động Kho (Hao Hụt & Tăng Thêm)</span>
-            </h3>
-            <p class="text-xs text-slate-400">
-              Bấm "Lưu Mốc So Sánh" trước khi đi gom đồ hoặc trả hàng, sau đó dán lại rương để xem item nào tăng/giảm.
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="btnCreateSnapshot" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-              <span>Lưu Mốc So Sánh</span>
-            </button>
-            <button id="btnClearSnapshot" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition">
-              Xóa Mốc
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="trending-up" class="w-4 h-4"></i> Đầy Lên Nhiều Nhất (Gửi thêm vào)
-              </span>
-            </div>
-            <div id="diffIncreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
-          </div>
-
-          <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="trending-down" class="w-4 h-4"></i> Hao Đi Nhiều Nhất (Bị lấy ra)
-              </span>
-            </div>
-            <div id="diffDecreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
-          </div>
-        </div>
-      </div>
-
-    </section>
-  </main>
-
-  <!-- MODAL: CÀI ĐẶT API KEY -->
-  <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
-          <h2 class="text-base font-bold text-white">Cấu hình Gemini Vision API</h2>
-        </div>
-        <button id="btnCloseConfig" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <p class="text-xs text-slate-400 leading-relaxed">
-        Nhập Google Gemini API Key để quét tự động ảnh rương bằng AI. Khóa này chỉ lưu trữ trên LocalStorage trình duyệt của bạn.
-      </p>
-      <div class="space-y-2">
-        <label class="text-xs font-semibold text-slate-300">Gemini API Key</label>
-        <div class="relative">
-          <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full px-3 py-2 text-xs font-mono bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
-          <button id="toggleApiKeyVis" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-      <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
-        <button id="btnClearApiKey" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Khóa</button>
-        <button id="btnSaveApiKey" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Lưu Cấu Hình</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: QUẢN LÝ RƯƠNG -->
-  <div id="chestManagerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+<!-- MODAL XÁC NHẬN NẠP ẢNH: CHỌN ACC & RƯƠNG -->
+  <div id="confirmUploadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2">
-          <i data-lucide="folder-cog" class="w-5 h-5 text-sky-400"></i>
-          <h2 class="text-sm font-bold text-white">Quản Lý Danh Sách Rương</h2>
-        </div>
-        <button id="btnCloseChestManager" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
-        <div class="flex items-center justify-between">
-          <span class="text-slate-300 font-semibold">Các Rương Đang Hoạt Động:</span>
-          <button id="btnAddNewChestFromModal" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold flex items-center gap-1">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Thêm Rương Mới
-          </button>
-        </div>
-        <div id="modalChestListContainer" class="space-y-2"></div>
-        <div class="pt-3 border-t border-slate-800 space-y-2">
-          <span class="text-slate-300 font-semibold block">Vật Phẩm Đang Bị Bỏ Qua:</span>
-          <div id="modalIgnoredChips" class="flex flex-wrap gap-1.5 p-2 bg-slate-950 rounded-lg border border-slate-800 min-h-[36px]"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: SỬA Ô VẬT PHẨM -->
-  <div id="editItemModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
         <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i>
-          <span>Chỉnh sửa ô vật phẩm</span>
+          <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i>
+          <span>Xác Nhận Nạp Ảnh Rương</span>
         </h3>
-        <button id="btnCloseEditModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <button id="btnCancelUpload" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Tên vật phẩm:</label>
-          <input type="text" id="editItemName" list="knownItemsList" class="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
-          <datalist id="knownItemsList"></datalist>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Số lượng:</label>
-          <input type="number" id="editItemQty" min="1" max="999999" class="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+
+      <!-- Preview ảnh vừa dán -->
+      <div class="flex items-center gap-3 p-2 bg-slate-950 rounded-xl border border-slate-800">
+        <img id="uploadPreviewImg" src="" class="w-16 h-16 object-cover rounded-lg border border-slate-700">
+        <div class="text-xs text-slate-400">
+          <span class="text-slate-200 font-semibold block">Ảnh lưới kho game</span>
+          <span>Chọn đúng tài khoản và số rương để cập nhật.</span>
         </div>
       </div>
-      <div class="pt-2 flex justify-end gap-2">
-        <button id="btnDeleteSlot" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Ô Này</button>
-        <button id="btnSaveSlot" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Cập Nhật</button>
+
+      <div class="space-y-3 text-xs">
+        <!-- 1. Chọn hoặc nhập tên Tài khoản -->
+        <div>
+          <label class="text-slate-300 font-bold block mb-1">1. Tên Tài Khoản (Acc):</label>
+          <div class="flex gap-2">
+            <select id="selectAccount" class="flex-1 bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold"></select>
+            <button id="btnQuickNewAcc" title="Thêm tên tài khoản mới" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 font-semibold">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Chọn Rương (1, 2, 3...) -->
+        <div>
+          <label class="text-slate-300 font-bold block mb-1">2. Chọn Rương Cần Nạp:</label>
+          <div class="grid grid-cols-4 gap-2" id="chestNumberSelector">
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:border-emerald-500 active-chest" data-num="Rương 1">Rương 1</button>
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:border-emerald-500" data-num="Rương 2">Rương 2</button>
+            <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold hover:border-emerald-500" data-num="Rương 3">Rương 3</button>
+            <button type="button" id="btnCustomChestNum" class="py-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 hover:text-white font-semibold">+ Khác</button>
+          </div>
+          <input type="text" id="customChestInput" placeholder="Nhập tên rương khác..." class="hidden mt-2 w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <!-- Nút hành động -->
+      <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
+        <button id="btnDismissUpload" class="px-3 py-2 text-xs text-slate-400 hover:bg-slate-800 rounded-xl font-medium">Hủy</button>
+        <button id="btnConfirmUpload" class="px-4 py-2 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-900/30">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Cập Nhật Rương</span>
+        </button>
       </div>
     </div>
   </div>
-
-  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-  <!-- Nạp các file script theo thứ tự phụ thuộc -->
-  <script src="js/data.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/app.js"></script>
-</body>
-</html>
