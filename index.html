@@ -4,65 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trợ Lý Kiểm Kho Game - Auto Inventory Auditor</title>
-  <!-- Tailwind CSS CDN -->
+  
+  <!-- CDN Thư viện -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind config & Custom Style -->
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
           colors: {
             brand: {
-              50: '#ecfdf5',
-              500: '#10b981',
-              600: '#059669',
-              700: '#047857',
-              800: '#065f46',
-              900: '#064e3b',
+              50: '#ecfdf5', 500: '#10b981', 600: '#059669',
+              700: '#047857', 800: '#065f46', 900: '#064e3b',
             },
             game: {
-              panel: '#151d28',
-              card: '#1e293b',
-              slot: '#0f172a',
-              accent: '#f59e0b',
+              panel: '#151d28', card: '#1e293b', slot: '#0f172a', accent: '#f59e0b',
             }
           }
         }
       }
     }
   </script>
-  <style>
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    
-    .drop-active {
-      border-color: #10b981 !important;
-      background-color: rgba(16, 185, 129, 0.08) !important;
-      transform: scale(1.005);
-    }
-    .badge-amber {
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: #fbbf24;
-    }
-    .badge-emerald {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #34d399;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[#0b0f17] text-slate-200 min-h-screen font-sans antialiased flex flex-col selection:bg-emerald-500 selection:text-white">
 
@@ -83,25 +53,18 @@
       </div>
 
       <div class="flex items-center gap-2.5">
-        <!-- Quick Mock Button -->
         <button id="btnLoadMock" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 transition shadow-sm">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
           <span>Nạp 4 Rương Mẫu</span>
         </button>
-
-        <!-- Quản Lý Rương Modal Toggle -->
         <button id="btnOpenChestManager" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
           <i data-lucide="folder-cog" class="w-3.5 h-3.5 text-sky-400"></i>
           <span>Quản Lý Rương</span>
         </button>
-
-        <!-- API Config Modal Toggle -->
         <button id="btnOpenConfig" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
           <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-400"></i>
           <span id="apiKeyLabel">Cài đặt API</span>
         </button>
-
-        <!-- Reset All Data -->
         <button id="btnResetAll" title="Xóa hết dữ liệu rương" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-900/40 transition">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
@@ -116,7 +79,6 @@
       <div class="absolute -right-16 -bottom-16 w-52 h-52 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="flex flex-col md:flex-row gap-5 items-stretch">
-        <!-- Drag & Drop / Paste Box -->
         <div id="dropZone" tabindex="0" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 bg-game-slot/60 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition group focus:outline-none focus:border-emerald-500">
           <input type="file" id="fileInput" accept="image/*" multiple class="hidden" />
           <div class="w-14 h-14 rounded-2xl bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
@@ -135,9 +97,7 @@
           </div>
         </div>
 
-        <!-- Mode & Target Chest Box -->
         <div class="w-full md:w-80 bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
-          <!-- Chọn rương đích nạp liệu -->
           <div class="space-y-2">
             <div class="flex items-center justify-between text-xs">
               <label class="text-slate-300 font-bold uppercase tracking-wider">Đích Nạp Ảnh:</label>
@@ -145,9 +105,7 @@
                 <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Thêm rương (+)
               </button>
             </div>
-            <select id="targetChestSelect" class="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-medium">
-              <!-- Danh sách rương load từ state -->
-            </select>
+            <select id="targetChestSelect" class="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-lg text-emerald-300 focus:outline-none focus:border-emerald-500 font-medium"></select>
             <p class="text-[11px] text-slate-500">Ảnh thả hoặc Ctrl+V sẽ nạp đè vào rương đang được chọn này.</p>
           </div>
 
@@ -156,9 +114,7 @@
               <span class="text-slate-400 font-medium">Chế độ phân tích:</span>
               <span id="modeBadge" class="badge-amber text-xs px-2 py-0.5 rounded-full font-semibold">Chế độ Demo</span>
             </div>
-            <p id="modeDesc" class="text-[11px] text-slate-400 leading-relaxed">
-              Bạn chưa thiết lập Gemini API Key.
-            </p>
+            <p id="modeDesc" class="text-[11px] text-slate-400 leading-relaxed">Bạn chưa thiết lập Gemini API Key.</p>
           </div>
 
           <div class="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
@@ -182,7 +138,6 @@
     <!-- Content Tabs & Filters -->
     <section class="space-y-4">
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <!-- View Tabs (Tổng kho / Chi tiết / Biến động Hao-Đầy) -->
         <div class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
           <button id="tabSummaryBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
             <i data-lucide="layout-grid" class="w-4 h-4"></i>
@@ -198,7 +153,6 @@
           </button>
         </div>
 
-        <!-- Search & Export Tools -->
         <div class="flex items-center gap-2 flex-wrap">
           <div class="relative flex-1 sm:w-56 min-w-[160px]">
             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
@@ -210,7 +164,6 @@
             <span>Hiện item bỏ qua</span>
           </label>
 
-          <!-- Export Dropdown / Buttons -->
           <button id="btnExportCSV" title="Xuất CSV" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
             <span class="hidden sm:inline">CSV</span>
@@ -241,9 +194,7 @@
                   <th class="py-3 px-4 text-center w-36">Thao Tác</th>
                 </tr>
               </thead>
-              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-slate-300 text-xs sm:text-sm">
-                <!-- Dynamically populated rows -->
-              </tbody>
+              <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-slate-300 text-xs sm:text-sm"></tbody>
             </table>
           </div>
 
@@ -257,10 +208,7 @@
 
       <!-- TAB 2: DETAILED CHESTS VIEW -->
       <div id="tabChestsView" class="hidden space-y-6">
-        <div id="chestsContainer" class="space-y-6">
-          <!-- Dynamic Chest Cards -->
-        </div>
-
+        <div id="chestsContainer" class="space-y-6"></div>
         <div id="emptyChestNotice" class="bg-game-card border border-slate-800 rounded-2xl p-12 text-center text-slate-500 space-y-2">
           <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-600"></i>
           <p class="text-sm font-medium">Chưa có rương nào được thêm vào danh sách.</p>
@@ -291,28 +239,22 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Cột Đầy Lên (Nạp thêm) -->
           <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between pb-2 border-b border-slate-800">
               <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                 <i data-lucide="trending-up" class="w-4 h-4"></i> Đầy Lên Nhiều Nhất (Gửi thêm vào)
               </span>
             </div>
-            <div id="diffIncreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto">
-              <!-- Render items tăng -->
-            </div>
+            <div id="diffIncreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
           </div>
 
-          <!-- Cột Hao Đi (Rút bớt) -->
           <div class="bg-game-card border border-slate-800 rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between pb-2 border-b border-slate-800">
               <span class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
                 <i data-lucide="trending-down" class="w-4 h-4"></i> Hao Đi Nhiều Nhất (Bị lấy ra)
               </span>
             </div>
-            <div id="diffDecreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto">
-              <!-- Render items giảm -->
-            </div>
+            <div id="diffDecreasedList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
           </div>
         </div>
       </div>
@@ -330,11 +272,9 @@
         </div>
         <button id="btnCloseConfig" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-
       <p class="text-xs text-slate-400 leading-relaxed">
         Nhập Google Gemini API Key để quét tự động ảnh rương bằng AI. Khóa này chỉ lưu trữ trên LocalStorage trình duyệt của bạn.
       </p>
-
       <div class="space-y-2">
         <label class="text-xs font-semibold text-slate-300">Gemini API Key</label>
         <div class="relative">
@@ -344,7 +284,6 @@
           </button>
         </div>
       </div>
-
       <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
         <button id="btnClearApiKey" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Khóa</button>
         <button id="btnSaveApiKey" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Lưu Cấu Hình</button>
@@ -352,7 +291,7 @@
     </div>
   </div>
 
-  <!-- MODAL: QUẢN LÝ RƯƠNG & DANH SÁCH BỎ QUA -->
+  <!-- MODAL: QUẢN LÝ RƯƠNG -->
   <div id="chestManagerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -362,7 +301,6 @@
         </div>
         <button id="btnCloseChestManager" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-
       <div class="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
         <div class="flex items-center justify-between">
           <span class="text-slate-300 font-semibold">Các Rương Đang Hoạt Động:</span>
@@ -370,23 +308,16 @@
             <i data-lucide="plus" class="w-3.5 h-3.5"></i> Thêm Rương Mới
           </button>
         </div>
-
-        <div id="modalChestListContainer" class="space-y-2">
-          <!-- Render danh sách rương cho phép sửa tên / xóa -->
-        </div>
-
-        <!-- Danh sách item bỏ qua -->
+        <div id="modalChestListContainer" class="space-y-2"></div>
         <div class="pt-3 border-t border-slate-800 space-y-2">
           <span class="text-slate-300 font-semibold block">Vật Phẩm Đang Bị Bỏ Qua:</span>
-          <div id="modalIgnoredChips" class="flex flex-wrap gap-1.5 p-2 bg-slate-950 rounded-lg border border-slate-800 min-h-[36px]">
-            <!-- Render chips item -->
-          </div>
+          <div id="modalIgnoredChips" class="flex flex-wrap gap-1.5 p-2 bg-slate-950 rounded-lg border border-slate-800 min-h-[36px]"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Manual Edit Item Modal -->
+  <!-- MODAL: SỬA Ô VẬT PHẨM -->
   <div id="editItemModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
@@ -396,7 +327,6 @@
         </h3>
         <button id="btnCloseEditModal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
       <div class="space-y-3">
         <div>
           <label class="text-xs text-slate-400 block mb-1">Tên vật phẩm:</label>
@@ -408,7 +338,6 @@
           <input type="number" id="editItemQty" min="1" max="999999" class="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
         </div>
       </div>
-
       <div class="pt-2 flex justify-end gap-2">
         <button id="btnDeleteSlot" class="px-3 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition font-medium">Xóa Ô Này</button>
         <button id="btnSaveSlot" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold">Cập Nhật</button>
@@ -416,1009 +345,13 @@
     </div>
   </div>
 
-  <!-- Toast Notification Box -->
   <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <script>
-    const STORAGE_KEY = "HKTN_INVENTORY_DATA_FULL";
-
-    /* Predefined Game Known Items (Từ bộ rương võ hiệp của game) */
-    const KNOWN_ITEMS = [
-      "Võ sĩ yêu đái", "Quỷ Hồn", "Linh Tán", "Thiết bát quái", "Linh Cầm",
-      "Cánh dơi", "Vòng Bạch Ngọc", "Canh Mộc Bài", "Mặt nạ Võ sĩ", "Bùa vàng",
-      "Linh Tiêu", "Võ sĩ đao", "Lệnh bài sư môn Ngũ Độc", "Bạch Ngưu Lân",
-      "Toái cốt", "Da hổ", "Huyết Nha vũ", "Thuốc nổ", "Linh Địch", "Tàn thương",
-      "Đại Cang đao", "Phù ấn", "Linh Quả", "Giáp xác phiến", "Găng tay",
-      "Bí kíp / Sách vàng", "Tê Ngưu Cung"
-    ];
-
-    /* 4 Predefined Realistic Chests matching user's inventory */
-    const MOCK_CHESTS_DATA = [
-      {
-        id: "chest-1",
-        title: "Rương 1",
-        createdAt: "2026-09-20 20:45",
-        slots: [
-          { name: "Bùa vàng", qty: 999 },
-          { name: "Lệnh bài sư môn Ngũ Độc", qty: 175 },
-          { name: "Cánh dơi", qty: 999 },
-          { name: "Cánh dơi", qty: 999 },
-          { name: "Canh Mộc Bài", qty: 999 },
-          { name: "Canh Mộc Bài", qty: 667 },
-          { name: "Thiết bát quái", qty: 999 },
-          { name: "Thiết bát quái", qty: 999 },
-          { name: "Thiết bát quái", qty: 340 },
-          { name: "Quỷ Hồn", qty: 999 },
-          { name: "Quỷ Hồn", qty: 999 },
-          { name: "Quỷ Hồn", qty: 999 },
-          { name: "Quỷ Hồn", qty: 999 },
-          { name: "Vòng Bạch Ngọc", qty: 999 },
-          { name: "Vòng Bạch Ngọc", qty: 737 },
-          { name: "Bạch Ngưu Lân", qty: 116 },
-          { name: "Võ sĩ đao", qty: 553 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 508 },
-          { name: "Mặt nạ Võ sĩ", qty: 999 },
-          { name: "Linh Tiêu", qty: 687 },
-          { name: "Linh Tán", qty: 999 },
-          { name: "Linh Tán", qty: 999 },
-          { name: "Linh Tán", qty: 999 },
-          { name: "Linh Tán", qty: 368 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 216 }
-        ]
-      },
-      {
-        id: "chest-2",
-        title: "Rương 2",
-        createdAt: "2026-09-20 20:50",
-        slots: [
-          { name: "Linh Địch", qty: 999 },
-          { name: "Linh Địch", qty: 999 },
-          { name: "Linh Địch", qty: 999 },
-          { name: "Linh Địch", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 999 },
-          { name: "Huyết Nha vũ", qty: 37 },
-          { name: "Da hổ", qty: 999 },
-          { name: "Da hổ", qty: 999 },
-          { name: "Da hổ", qty: 999 },
-          { name: "Da hổ", qty: 999 },
-          { name: "Da hổ", qty: 999 },
-          { name: "Da hổ", qty: 918 },
-          { name: "Toái cốt", qty: 999 },
-          { name: "Toái cốt", qty: 999 },
-          { name: "Toái cốt", qty: 999 },
-          { name: "Toái cốt", qty: 999 },
-          { name: "Toái cốt", qty: 924 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Đại Cang đao", qty: 999 },
-          { name: "Đại Cang đao", qty: 659 },
-          { name: "Đại Cang đao", qty: 999 },
-          { name: "Thuốc nổ", qty: 999 },
-          { name: "Thuốc nổ", qty: 999 },
-          { name: "Thuốc nổ", qty: 999 },
-          { name: "Thuốc nổ", qty: 999 },
-          { name: "Thuốc nổ", qty: 473 },
-          { name: "Thuốc nổ", qty: 999 },
-          { name: "Tàn thương", qty: 999 },
-          { name: "Tàn thương", qty: 999 },
-          { name: "Tàn thương", qty: 999 },
-          { name: "Toái cốt", qty: 907 }
-        ]
-      },
-      {
-        id: "chest-3",
-        title: "Rương 3",
-        createdAt: "2026-09-20 21:00",
-        slots: [
-          { name: "Canh Mộc Bài", qty: 74 },
-          { name: "Tê Ngưu Cung", qty: 56 },
-          { name: "Võ sĩ đao", qty: 162 },
-          { name: "Võ sĩ đao", qty: 999 },
-          { name: "Võ sĩ đao", qty: 999 },
-          { name: "Võ sĩ đao", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 695 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Võ sĩ yêu đái", qty: 999 },
-          { name: "Giáp xác phiến", qty: 636 },
-          { name: "Linh Tiêu", qty: 999 },
-          { name: "Linh Tiêu", qty: 655 },
-          { name: "Linh Quả", qty: 999 },
-          { name: "Linh Tán", qty: 714 },
-          { name: "Linh Tán", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Linh Cầm", qty: 154 },
-          { name: "Linh Cầm", qty: 999 },
-          { name: "Da hổ", qty: 852 },
-          { name: "Toái cốt", qty: 938 },
-          { name: "Thiết bát quái", qty: 57 },
-          { name: "Đại Cang đao", qty: 999 },
-          { name: "Đại Cang đao", qty: 999 },
-          { name: "Đại Cang đao", qty: 41 },
-          { name: "Thuốc nổ", qty: 23 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Phù ấn", qty: 868 },
-          { name: "Phù ấn", qty: 999 }
-        ]
-      },
-      {
-        id: "chest-4",
-        title: "Rương 4",
-        createdAt: "2026-09-20 21:05",
-        slots: [
-          { name: "Phù ấn", qty: 999 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Găng tay", qty: 286 },
-          { name: "Bí kíp / Sách vàng", qty: 120 },
-          { name: "Toái cốt", qty: 408 },
-          { name: "Phù ấn", qty: 999 },
-          { name: "Phù ấn", qty: 891 }
-        ]
-      }
-    ];
-
-    /* Global State (Lưu trọn vẹn vào LocalStorage) */
-    let appState = {
-      apiKey: localStorage.getItem("gemini_api_key") || "",
-      chests: [],
-      ignoredItems: [],
-      snapshot: null, // Lưu mốc đối chiếu hao / đầy
-      searchQuery: "",
-      showIgnored: false,
-      sortBy: "qty", // 'name' or 'qty'
-      sortDesc: true,
-      currentTab: "summary", // 'summary' | 'chests' | 'diff'
-      editingSlot: null // { chestId, slotIndex }
-    };
-
-    function loadPersistedState() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          appState.chests = parsed.chests || [];
-          appState.ignoredItems = parsed.ignoredItems || [];
-          appState.snapshot = parsed.snapshot || null;
-        } catch (e) {
-          console.error("Lỗi đọc LocalStorage:", e);
-        }
-      }
-      if (!appState.chests || appState.chests.length === 0) {
-        appState.chests = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA));
-      }
-    }
-
-    function savePersistedState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        chests: appState.chests,
-        ignoredItems: appState.ignoredItems,
-        snapshot: appState.snapshot
-      }));
-      renderAll();
-    }
-
-    // Initialize Known Items Datalist for fast autofill
-    const datalist = document.getElementById("knownItemsList");
-    KNOWN_ITEMS.forEach(item => {
-      const opt = document.createElement("option");
-      opt.value = item;
-      datalist.appendChild(opt);
-    });
-
-    function showToast(message, type = "info") {
-      const container = document.getElementById("toastContainer");
-      const toast = document.createElement("div");
-      toast.className = `px-4 py-2.5 rounded-xl text-xs font-medium text-white shadow-xl flex items-center gap-2 border transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0 ${
-        type === "success" ? "bg-emerald-950 border-emerald-500 text-emerald-200" :
-        type === "error" ? "bg-red-950 border-red-500 text-red-200" :
-        "bg-slate-900 border-slate-700 text-slate-200"
-      }`;
-      
-      const icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
-      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i> <span>${message}</span>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-
-      requestAnimationFrame(() => {
-        toast.classList.remove("translate-y-2", "opacity-0");
-      });
-
-      setTimeout(() => {
-        toast.classList.add("translate-y-2", "opacity-0");
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
-    }
-
-    function updateApiKeyUI() {
-      const modeBadge = document.getElementById("modeBadge");
-      const modeDesc = document.getElementById("modeDesc");
-      const apiKeyLabel = document.getElementById("apiKeyLabel");
-
-      if (appState.apiKey && appState.apiKey.trim().length > 0) {
-        modeBadge.className = "badge-emerald text-xs px-2 py-0.5 rounded-full font-semibold";
-        modeBadge.textContent = "Gemini AI Online";
-        modeDesc.innerHTML = `Đã kết nối Gemini API. Khi dán ảnh (<kbd class="px-1 py-0.5 rounded bg-slate-800 text-[10px]">Ctrl+V</kbd>), hệ thống sẽ trực tiếp gọi mô hình AI để nhận diện từng ô đồ.`;
-        apiKeyLabel.textContent = "API: Sẵn Sàng";
-      } else {
-        modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
-        modeBadge.textContent = "Chế độ Demo";
-        modeDesc.textContent = "Chưa cài API Key. Khi dán hoặc thả ảnh, hệ thống sẽ sử dụng bộ dữ liệu giả lập thông minh. Bạn có thể bấm 'Cài đặt API' để kích hoạt AI thực tế.";
-        apiKeyLabel.textContent = "Cài đặt API";
-      }
-    }
-
-    async function analyzeChestWithGemini(base64Image) {
-      const systemPrompt = `Bạn là trợ lý chuyên bóc tách dữ liệu rương đồ game võ hiệp dạng lưới.
-Hãy nhìn vào ảnh rương đồ và trích xuất danh sách các ô có chứa vật phẩm và số lượng tương ứng.
-Danh mục tên vật phẩm chuẩn của game bao gồm:
-[${KNOWN_ITEMS.join(", ")}].
-
-QUY TẮC QUAN TRỌNG:
-1. Trả về đúng định dạng JSON Array chứa các object { "name": string, "qty": number }.
-2. Không thêm markdown, không thêm chữ giải thích bên ngoài.
-3. Số lượng thường có tiền tố 'x' góc dưới (ví dụ x999, x508, x116). Chỉ lấy số nguyên dương.
-4. Ô nào trống thì bỏ qua.`;
-
-      const payload = {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: "Hãy nhận diện tất cả các ô vật phẩm trong rương đồ này và số lượng tương ứng theo định dạng JSON:" },
-              {
-                inlineData: {
-                  mimeType: "image/png",
-                  data: base64Image
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json"
-        },
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        }
-      };
-
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.apiKey}`;
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `Lỗi API (${res.status})`);
-      }
-
-      const data = await res.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) throw new Error("AI không thể trích xuất vật phẩm từ ảnh này.");
-
-      const parsed = JSON.parse(rawText);
-      if (!Array.isArray(parsed)) throw new Error("Định dạng dữ liệu trả về từ AI không hợp lệ.");
-      return parsed;
-    }
-
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result.split(',')[1];
-          resolve({ base64, dataUrl: reader.result });
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function handleIncomingImages(files) {
-      if (!files || files.length === 0) return;
-      const readingBadge = document.getElementById("readingBadge");
-      readingBadge.classList.remove("hidden");
-
-      const select = document.getElementById("targetChestSelect");
-      const targetChestId = select.value;
-      const targetChest = appState.chests.find(c => c.id === targetChestId);
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith("image/")) continue;
-
-        const chestDisplayName = targetChest ? targetChest.title : `Rương ${appState.chests.length + 1}`;
-        showToast(`Đang phân tích hình ảnh nạp vào [${chestDisplayName}]...`, "info");
-
-        try {
-          const { base64, dataUrl } = await fileToBase64(file);
-          let detectedSlots = [];
-
-          if (appState.apiKey && appState.apiKey.trim().length > 0) {
-            detectedSlots = await analyzeChestWithGemini(base64);
-          } else {
-            await new Promise(r => setTimeout(r, 600));
-            const mockIndex = Math.abs(appState.chests.length) % MOCK_CHESTS_DATA.length;
-            detectedSlots = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA[mockIndex].slots));
-          }
-
-          if (targetChest) {
-            targetChest.slots = detectedSlots;
-            targetChest.imageUrl = dataUrl;
-            targetChest.createdAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-          } else {
-            const newChestId = "chest-" + Date.now();
-            appState.chests.push({
-              id: newChestId,
-              title: chestDisplayName,
-              imageUrl: dataUrl,
-              createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
-              slots: detectedSlots
-            });
-          }
-
-          showToast(`Đã nhận diện và cập nhật thành công [${chestDisplayName}]! (${detectedSlots.length} ô)`, "success");
-          savePersistedState();
-        } catch (err) {
-          console.error(err);
-          showToast(`Lỗi phân tích ảnh: ${err.message}`, "error");
-        }
-      }
-      readingBadge.classList.add("hidden");
-    }
-
-    /* Paste Listener (Ctrl+V) */
-    window.addEventListener("paste", (e) => {
-      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-      const imageFiles = [];
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-          const file = items[i].getAsFile();
-          if (file) imageFiles.push(file);
-        }
-      }
-      if (imageFiles.length > 0) {
-        e.preventDefault();
-        handleIncomingImages(imageFiles);
-      }
-    });
-
-    /* Setup Drag & Drop */
-    const dropZone = document.getElementById("dropZone");
-    const fileInput = document.getElementById("fileInput");
-
-    dropZone.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => {
-      handleIncomingImages(Array.from(e.target.files));
-      fileInput.value = "";
-    });
-
-    ["dragenter", "dragover"].forEach(event => {
-      dropZone.addEventListener(event, (e) => {
-        e.preventDefault();
-        dropZone.classList.add("drop-active");
-      });
-    });
-
-    ["dragleave", "drop"].forEach(event => {
-      dropZone.addEventListener(event, (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("drop-active");
-      });
-    });
-
-    dropZone.addEventListener("drop", (e) => {
-      const dt = e.dataTransfer;
-      const files = Array.from(dt.files);
-      handleIncomingImages(files);
-    });
-
-    function calculateInventorySummary() {
-      const summaryMap = new Map();
-
-      appState.chests.forEach((chest) => {
-        chest.slots.forEach(slot => {
-          const name = (slot.name || "Chưa đặt tên").trim();
-          const qty = parseInt(slot.qty) || 0;
-          if (!summaryMap.has(name)) {
-            summaryMap.set(name, {
-              name: name,
-              totalQty: 0,
-              stackCount: 0,
-              foundChests: new Set(),
-              isIgnored: appState.ignoredItems.includes(name)
-            });
-          }
-          const itemStat = summaryMap.get(name);
-          itemStat.totalQty += qty;
-          itemStat.stackCount += 1;
-          itemStat.foundChests.add(chest.title);
-        });
-      });
-
-      let results = Array.from(summaryMap.values());
-
-      // Filter by Search Query
-      if (appState.searchQuery) {
-        const query = appState.searchQuery.toLowerCase();
-        results = results.filter(i => i.name.toLowerCase().includes(query));
-      }
-
-      // Filter Ignored
-      if (!appState.showIgnored) {
-        results = results.filter(i => !i.isIgnored);
-      }
-
-      // Sort
-      results.sort((a, b) => {
-        if (appState.sortBy === "name") {
-          return appState.sortDesc ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
-        } else {
-          return appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty;
-        }
-      });
-
-      return results;
-    }
-
-    function renderTargetChestSelect() {
-      const select = document.getElementById("targetChestSelect");
-      const currentVal = select.value;
-      select.innerHTML = appState.chests.map((c, i) => `
-        <option value="${c.id}">${c.title} (${c.slots.length} ô có đồ)</option>
-      `).join("");
-
-      if (currentVal && appState.chests.some(c => c.id === currentVal)) {
-        select.value = currentVal;
-      }
-    }
-
-    function renderAll() {
-      renderTargetChestSelect();
-      const summaryData = calculateInventorySummary();
-      const summaryTableBody = document.getElementById("summaryTableBody");
-      const emptySummaryNotice = document.getElementById("emptySummaryNotice");
-
-      // Global Stats
-      let grandTotalQty = 0;
-      summaryData.forEach(item => {
-        if (!item.isIgnored) grandTotalQty += item.totalQty;
-      });
-
-      document.getElementById("statChestsCount").textContent = appState.chests.length;
-      document.getElementById("statUniqueItems").textContent = summaryData.filter(i => !i.isIgnored).length;
-      document.getElementById("statTotalItems").textContent = grandTotalQty.toLocaleString('vi-VN');
-      document.getElementById("chestTabCount").textContent = appState.chests.length;
-
-      // Render Summary Table Rows
-      summaryTableBody.innerHTML = "";
-      if (summaryData.length === 0) {
-        emptySummaryNotice.classList.remove("hidden");
-      } else {
-        emptySummaryNotice.classList.add("hidden");
-        summaryData.forEach((item, index) => {
-          const tr = document.createElement("tr");
-          tr.className = `hover:bg-slate-800/40 transition group border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40 bg-slate-900/30' : ''}`;
-
-          const chestPills = Array.from(item.foundChests).map(c => 
-            `<span class="inline-block px-2 py-0.5 text-[11px] rounded-md bg-slate-800 border border-slate-700/60 text-slate-300 mr-1">${c}</span>`
-          ).join("");
-
-          tr.innerHTML = `
-            <td class="py-3 px-4 text-center font-mono text-slate-500">${index + 1}</td>
-            <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full ${item.isIgnored ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
-              <span>${item.name}</span>
-              ${item.isIgnored ? '<span class="text-[10px] text-rose-400 bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-800">Bỏ qua</span>' : ''}
-            </td>
-            <td class="py-3 px-4 text-center">
-              <span class="font-mono bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">${item.stackCount} ô</span>
-            </td>
-            <td class="py-3 px-4 text-center">${chestPills}</td>
-            <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm sm:text-base">
-              ${item.totalQty.toLocaleString('vi-VN')}
-            </td>
-            <td class="py-3 px-4 text-center">
-              <div class="flex items-center justify-center gap-1.5">
-                <button onclick="toggleIgnoreItem('${item.name}')" title="${item.isIgnored ? 'Bật theo dõi lại' : 'Bỏ qua không kiểm'}" class="p-1.5 rounded-lg ${item.isIgnored ? 'bg-sky-900/60 text-sky-300 border border-sky-700' : 'bg-slate-800 text-slate-400 hover:text-amber-400'} transition">
-                  <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="copySingleItemSummary('${item.name}', ${item.totalQty})" title="Sao chép tên & số lượng" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
-                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </td>
-          `;
-          summaryTableBody.appendChild(tr);
-        });
-      }
-
-      // Render Detailed Chests
-      const chestsContainer = document.getElementById("chestsContainer");
-      const emptyChestNotice = document.getElementById("emptyChestNotice");
-      chestsContainer.innerHTML = "";
-
-      if (appState.chests.length === 0) {
-        emptyChestNotice.classList.remove("hidden");
-      } else {
-        emptyChestNotice.classList.add("hidden");
-        appState.chests.forEach((chest, chestIdx) => {
-          const chestCard = document.createElement("div");
-          chestCard.className = "bg-game-card border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4";
-          
-          let chestTotalQty = 0;
-          chest.slots.forEach(s => chestTotalQty += (parseInt(s.qty) || 0));
-
-          const slotsHtml = chest.slots.map((slot, slotIdx) => `
-            <div onclick="openEditSlotModal('${chest.id}', ${slotIdx})" class="group cursor-pointer bg-game-slot border border-slate-800 hover:border-emerald-500/80 rounded-xl p-2.5 flex flex-col justify-between transition relative hover:scale-105">
-              <div class="text-[11px] font-medium text-slate-300 truncate" title="${slot.name}">
-                ${slot.name}
-              </div>
-              <div class="mt-2 flex items-center justify-between">
-                <span class="text-[10px] text-slate-500">Ô ${slotIdx + 1}</span>
-                <span class="text-xs font-mono font-bold text-amber-400">x${slot.qty}</span>
-              </div>
-            </div>
-          `).join("");
-
-          chestCard.innerHTML = `
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center text-emerald-400 font-bold text-sm">
-                  ${chestIdx + 1}
-                </div>
-                <div>
-                  <h3 class="font-bold text-white text-base">${chest.title}</h3>
-                  <p class="text-xs text-slate-400">Thời gian: ${chest.createdAt || 'N/A'} &bull; ${chest.slots.length} ô có đồ</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                <span class="text-xs text-slate-400">Tổng: <strong class="text-amber-400 font-mono text-sm">${chestTotalQty.toLocaleString('vi-VN')}</strong></span>
-                <div class="flex items-center gap-1.5">
-                  <button onclick="addSlotToChest('${chest.id}')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 transition flex items-center gap-1">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> <span>Thêm Ô</span>
-                  </button>
-                  <button onclick="renameChestPrompt('${chest.id}')" title="Đổi tên rương" class="p-1 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition">
-                    <i data-lucide="edit-2" class="w-4 h-4"></i>
-                  </button>
-                  <button onclick="removeChest('${chest.id}')" title="Xoá rương" class="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 transition">
-                    <i data-lucide="trash" class="w-4 h-4"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Grid Slots Preview -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-              ${slotsHtml || '<p class="col-span-full py-4 text-center text-slate-500 italic">Rương chưa có vật phẩm</p>'}
-            </div>
-          `;
-          chestsContainer.appendChild(chestCard);
-        });
-      }
-
-      renderDiffView();
-      renderChestManagerModal();
-      lucide.createIcons();
-    }
-
-    /* Tab 3: Render Biến Động Hao / Đầy */
-    function renderDiffView() {
-      const incList = document.getElementById("diffIncreasedList");
-      const decList = document.getElementById("diffDecreasedList");
-
-      if (!appState.snapshot) {
-        incList.innerHTML = `<p class="text-slate-500 italic py-4 text-center">Chưa có mốc so sánh. Bấm "Lưu Mốc So Sánh" để ghi nhận trạng thái kho ban đầu.</p>`;
-        decList.innerHTML = `<p class="text-slate-500 italic py-4 text-center">Chưa có mốc so sánh.</p>`;
-        return;
-      }
-
-      const currentTotals = {};
-      appState.chests.forEach(c => {
-        c.slots.forEach(s => {
-          if (!s.name) return;
-          currentTotals[s.name] = (currentTotals[s.name] || 0) + (parseInt(s.qty) || 0);
-        });
-      });
-
-      const snapTotals = appState.snapshot;
-      const allNames = Array.from(new Set([...Object.keys(currentTotals), ...Object.keys(snapTotals)]));
-
-      const diffs = allNames.map(name => {
-        const cur = currentTotals[name] || 0;
-        const old = snapTotals[name] || 0;
-        return { name, diff: cur - old, cur, old };
-      });
-
-      const inc = diffs.filter(d => d.diff > 0).sort((a, b) => b.diff - a.diff);
-      const dec = diffs.filter(d => d.diff < 0).sort((a, b) => a.diff - b.diff);
-
-      incList.innerHTML = inc.length === 0 ? '<p class="text-slate-500 italic py-3 text-center">Không có vật phẩm nào tăng thêm.</p>' :
-        inc.map(d => `
-          <div class="flex items-center justify-between p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-            <span class="font-medium text-slate-200">${d.name}</span>
-            <div class="text-right">
-              <span class="text-emerald-400 font-bold font-mono text-sm">+${d.diff.toLocaleString('vi-VN')}</span>
-              <span class="text-[10px] text-slate-500 block">(${d.old.toLocaleString()} &rarr; ${d.cur.toLocaleString()})</span>
-            </div>
-          </div>
-        `).join("");
-
-      decList.innerHTML = dec.length === 0 ? '<p class="text-slate-500 italic py-3 text-center">Không có vật phẩm nào hao hụt.</p>' :
-        dec.map(d => `
-          <div class="flex items-center justify-between p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-            <span class="font-medium text-slate-200">${d.name}</span>
-            <div class="text-right">
-              <span class="text-rose-400 font-bold font-mono text-sm">${d.diff.toLocaleString('vi-VN')}</span>
-              <span class="text-[10px] text-slate-500 block">(${d.old.toLocaleString()} &rarr; ${d.cur.toLocaleString()})</span>
-            </div>
-          </div>
-        `).join("");
-    }
-
-    function renderChestManagerModal() {
-      const container = document.getElementById("modalChestListContainer");
-      container.innerHTML = appState.chests.map(c => `
-        <div class="flex items-center justify-between gap-2 p-2 bg-slate-950 border border-slate-800 rounded-xl">
-          <input type="text" value="${c.title}" onchange="updateChestTitle('${c.id}', this.value)" class="bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-slate-200 flex-1 text-xs focus:outline-none focus:border-sky-500 font-medium">
-          <span class="text-[11px] text-slate-500">${c.slots.length} ô</span>
-          <button onclick="removeChest('${c.id}')" title="Xóa rương" class="text-slate-400 hover:text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-        </div>
-      `).join("");
-
-      const chips = document.getElementById("modalIgnoredChips");
-      chips.innerHTML = appState.ignoredItems.length === 0 ? '<span class="text-slate-500 italic">Chưa bỏ qua vật phẩm nào</span>' :
-        appState.ignoredItems.map(name => `
-          <span class="bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700 flex items-center gap-1.5 text-xs">
-            ${name}
-            <i data-lucide="x" class="w-3 h-3 cursor-pointer hover:text-red-400" onclick="toggleIgnoreItem('${name}')"></i>
-          </span>
-        `).join("");
-    }
-
-    window.toggleIgnoreItem = function(name) {
-      if (appState.ignoredItems.includes(name)) {
-        appState.ignoredItems = appState.ignoredItems.filter(i => i !== name);
-        showToast(`Đã theo dõi lại [${name}]`, "info");
-      } else {
-        appState.ignoredItems.push(name);
-        showToast(`Đã bỏ qua [${name}]`, "info");
-      }
-      savePersistedState();
-    };
-
-    window.updateChestTitle = function(id, newTitle) {
-      const chest = appState.chests.find(c => c.id === id);
-      if (chest && newTitle.trim()) {
-        chest.title = newTitle.trim();
-        showToast(`Đã đổi tên thành ${chest.title}`, "success");
-        savePersistedState();
-      }
-    };
-
-    window.renameChestPrompt = function(chestId) {
-      const chest = appState.chests.find(c => c.id === chestId);
-      if (!chest) return;
-      const newTitle = prompt("Nhập tên mới cho rương:", chest.title);
-      if (newTitle && newTitle.trim()) {
-        chest.title = newTitle.trim();
-        savePersistedState();
-      }
-    };
-
-    function createNewChest(customName) {
-      const defaultName = `Rương ${appState.chests.length + 1}`;
-      const name = customName || prompt("Nhập tên rương mới (ví dụ: Rương Phụ, Kho Bang, Rương 5...):", defaultName);
-      if (name && name.trim()) {
-        const newId = "chest-" + Date.now();
-        appState.chests.push({
-          id: newId,
-          title: name.trim(),
-          createdAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
-          slots: []
-        });
-        savePersistedState();
-        document.getElementById("targetChestSelect").value = newId;
-        showToast(`Đã tạo [${name.trim()}]`, "success");
-      }
-    }
-
-    window.openEditSlotModal = function(chestId, slotIndex) {
-      const chest = appState.chests.find(c => c.id === chestId);
-      if (!chest || !chest.slots[slotIndex]) return;
-
-      appState.editingSlot = { chestId, slotIndex };
-      const slot = chest.slots[slotIndex];
-
-      document.getElementById("editItemName").value = slot.name;
-      document.getElementById("editItemQty").value = slot.qty;
-      document.getElementById("editItemModal").classList.remove("hidden");
-    };
-
-    document.getElementById("btnCloseEditModal").addEventListener("click", () => {
-      document.getElementById("editItemModal").classList.add("hidden");
-    });
-
-    document.getElementById("btnSaveSlot").addEventListener("click", () => {
-      if (!appState.editingSlot) return;
-      const { chestId, slotIndex } = appState.editingSlot;
-      const chest = appState.chests.find(c => c.id === chestId);
-      if (!chest) return;
-
-      const newName = document.getElementById("editItemName").value.trim() || "Vật phẩm lạ";
-      const newQty = parseInt(document.getElementById("editItemQty").value) || 1;
-
-      chest.slots[slotIndex] = { name: newName, qty: newQty };
-      document.getElementById("editItemModal").classList.add("hidden");
-      showToast(`Đã cập nhật ô thành ${newName} x${newQty}`, "success");
-      savePersistedState();
-    });
-
-    document.getElementById("btnDeleteSlot").addEventListener("click", () => {
-      if (!appState.editingSlot) return;
-      const { chestId, slotIndex } = appState.editingSlot;
-      const chest = appState.chests.find(c => c.id === chestId);
-      if (!chest) return;
-
-      chest.slots.splice(slotIndex, 1);
-      document.getElementById("editItemModal").classList.add("hidden");
-      showToast("Đã xóa ô vật phẩm", "info");
-      savePersistedState();
-    });
-
-    window.addSlotToChest = function(chestId) {
-      const chest = appState.chests.find(c => c.id === chestId);
-      if (!chest) return;
-      chest.slots.push({ name: "Võ sĩ yêu đái", qty: 999 });
-      showToast(`Đã thêm 1 ô mới vào ${chest.title}`, "success");
-      savePersistedState();
-    };
-
-    window.removeChest = function(chestId) {
-      if (confirm("Bạn có chắc chắn muốn xóa rương này?")) {
-        appState.chests = appState.chests.filter(c => c.id !== chestId);
-        showToast("Đã gỡ rương khỏi danh sách", "info");
-        savePersistedState();
-      }
-    };
-
-    window.copySingleItemSummary = function(name, qty) {
-      const text = `${name}\t${qty}`;
-      copyTextToClipboard(text, `Đã sao chép: ${name} (${qty})`);
-    };
-
-    function copyTextToClipboard(text, successMsg) {
-      const tempTextArea = document.createElement("textarea");
-      tempTextArea.value = text;
-      document.body.appendChild(tempTextArea);
-      tempTextArea.select();
-      try {
-        document.execCommand('copy');
-        showToast(successMsg, "success");
-      } catch (err) {
-        showToast("Không thể sao chép vào bộ nhớ đệm", "error");
-      }
-      document.body.removeChild(tempTextArea);
-    }
-
-    document.getElementById("btnCopyTable").addEventListener("click", () => {
-      const summary = calculateInventorySummary();
-      if (summary.length === 0) {
-        showToast("Không có dữ liệu để sao chép", "error");
-        return;
-      }
-      let content = "Tên Vật Phẩm\tSố Ô (Stacks)\tTổng Số Lượng\n";
-      summary.forEach(item => {
-        content += `${item.name}\t${item.stackCount}\t${item.totalQty}\n`;
-      });
-      copyTextToClipboard(content, "Đã sao chép toàn bộ bảng! Bạn có thể dán (Ctrl+V) thẳng vào Excel hoặc Google Sheets.");
-    });
-
-    document.getElementById("btnExportCSV").addEventListener("click", () => {
-      const summary = calculateInventorySummary();
-      if (summary.length === 0) {
-        showToast("Không có dữ liệu để xuất", "error");
-        return;
-      }
-      let csv = "\uFEFFTên Vật Phẩm,Số Ô Chiếm,Tổng Số Lượng\n";
-      summary.forEach(item => {
-        csv += `"${item.name.replace(/"/g, '""')}",${item.stackCount},${item.totalQty}\n`;
-      });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `kiem_kho_game_${Date.now()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showToast("Đã tải xuống tệp CSV kiểm kho!", "success");
-    });
-
-    // Tab Navigation
-    const tabSummaryBtn = document.getElementById("tabSummaryBtn");
-    const tabChestsBtn = document.getElementById("tabChestsBtn");
-    const tabDiffBtn = document.getElementById("tabDiffBtn");
-    const tabSummaryView = document.getElementById("tabSummaryView");
-    const tabChestsView = document.getElementById("tabChestsView");
-    const tabDiffView = document.getElementById("tabDiffView");
-
-    function setTab(tab) {
-      const tabs = [
-        { btn: tabSummaryBtn, view: tabSummaryView, id: "summary" },
-        { btn: tabChestsBtn, view: tabChestsView, id: "chests" },
-        { btn: tabDiffBtn, view: tabDiffView, id: "diff" }
-      ];
-
-      tabs.forEach(t => {
-        if (t.id === tab) {
-          t.btn.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap";
-          t.view.classList.remove("hidden");
-        } else {
-          t.btn.className = "px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap";
-          t.view.classList.add("hidden");
-        }
-      });
-      appState.currentTab = tab;
-      lucide.createIcons();
-    }
-
-    tabSummaryBtn.addEventListener("click", () => setTab("summary"));
-    tabChestsBtn.addEventListener("click", () => setTab("chests"));
-    tabDiffBtn.addEventListener("click", () => setTab("diff"));
-
-    // Sorting buttons
-    document.getElementById("sortByName").addEventListener("click", () => {
-      if (appState.sortBy === "name") {
-        appState.sortDesc = !appState.sortDesc;
-      } else {
-        appState.sortBy = "name";
-        appState.sortDesc = false;
-      }
-      renderAll();
-    });
-
-    document.getElementById("sortByQty").addEventListener("click", () => {
-      if (appState.sortBy === "qty") {
-        appState.sortDesc = !appState.sortDesc;
-      } else {
-        appState.sortBy = "qty";
-        appState.sortDesc = true;
-      }
-      renderAll();
-    });
-
-    // Realtime Search Filter & Checkbox
-    document.getElementById("searchInput").addEventListener("input", (e) => {
-      appState.searchQuery = e.target.value.trim();
-      renderAll();
-    });
-
-    document.getElementById("chkShowIgnored").addEventListener("change", (e) => {
-      appState.showIgnored = e.target.checked;
-      renderAll();
-    });
-
-    // Quick Add Chest
-    document.getElementById("btnQuickAddChest").addEventListener("click", () => createNewChest());
-    document.getElementById("btnAddNewChestFromModal").addEventListener("click", () => createNewChest());
-
-    // Snapshot controls
-    document.getElementById("btnCreateSnapshot").addEventListener("click", () => {
-      const snap = {};
-      appState.chests.forEach(c => {
-        c.slots.forEach(s => {
-          if (!s.name) return;
-          snap[s.name] = (snap[s.name] || 0) + (parseInt(s.qty) || 0);
-        });
-      });
-      appState.snapshot = snap;
-      savePersistedState();
-      showToast("Đã lưu mốc snapshot kho thành công!", "success");
-    });
-
-    document.getElementById("btnClearSnapshot").addEventListener("click", () => {
-      if (confirm("Bạn có muốn xóa mốc so sánh hiện tại?")) {
-        appState.snapshot = null;
-        savePersistedState();
-        showToast("Đã xóa mốc so sánh", "info");
-      }
-    });
-
-    // Load Mock Demo Dataset
-    document.getElementById("btnLoadMock").addEventListener("click", () => {
-      appState.chests = JSON.parse(JSON.stringify(MOCK_CHESTS_DATA));
-      savePersistedState();
-      showToast("Đã nạp đầy đủ 4 Rương Mẫu thực tế!", "success");
-    });
-
-    // Reset All Data
-    document.getElementById("btnResetAll").addEventListener("click", () => {
-      if (confirm("Thao tác này sẽ xóa sạch toàn bộ rương và dữ liệu trong máy. Tiếp tục?")) {
-        localStorage.removeItem(STORAGE_KEY);
-        appState.chests = [];
-        appState.ignoredItems = [];
-        appState.snapshot = null;
-        savePersistedState();
-        showToast("Đã xóa sạch toàn bộ dữ liệu", "info");
-      }
-    });
-
-    // Modal Chest Manager
-    const chestManagerModal = document.getElementById("chestManagerModal");
-    document.getElementById("btnOpenChestManager").addEventListener("click", () => {
-      chestManagerModal.classList.remove("hidden");
-      renderChestManagerModal();
-      lucide.createIcons();
-    });
-    document.getElementById("btnCloseChestManager").addEventListener("click", () => {
-      chestManagerModal.classList.add("hidden");
-    });
-
-    // Modal API Config
-    const configModal = document.getElementById("configModal");
-    const inputApiKey = document.getElementById("inputApiKey");
-
-    document.getElementById("btnOpenConfig").addEventListener("click", () => {
-      inputApiKey.value = appState.apiKey;
-      configModal.classList.remove("hidden");
-    });
-
-    document.getElementById("btnCloseConfig").addEventListener("click", () => {
-      configModal.classList.add("hidden");
-    });
-
-    document.getElementById("btnSaveApiKey").addEventListener("click", () => {
-      const key = inputApiKey.value.trim();
-      appState.apiKey = key;
-      localStorage.setItem("gemini_api_key", key);
-      configModal.classList.add("hidden");
-      updateApiKeyUI();
-      showToast(key ? "Đã lưu khóa API thành công!" : "Đã chuyển về chế độ Demo", "success");
-    });
-
-    document.getElementById("btnClearApiKey").addEventListener("click", () => {
-      inputApiKey.value = "";
-      appState.apiKey = "";
-      localStorage.removeItem("gemini_api_key");
-      configModal.classList.add("hidden");
-      updateApiKeyUI();
-      showToast("Đã xóa khóa API", "info");
-    });
-
-    document.getElementById("toggleApiKeyVis").addEventListener("click", () => {
-      inputApiKey.type = inputApiKey.type === "password" ? "text" : "password";
-    });
-
-    // On Load Initialization
-    window.addEventListener("DOMContentLoaded", () => {
-      loadPersistedState();
-      updateApiKeyUI();
-      renderAll();
-      lucide.createIcons();
-    });
-  </script>
+  <!-- Nạp các file script theo thứ tự phụ thuộc -->
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
