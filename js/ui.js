@@ -1,5 +1,25 @@
 let currentEditingSlotIdx = null;
 
+// Bảng 16 màu sắc phân tách rõ nét cho từng loại vật phẩm trong rương
+const ITEM_GROUP_COLORS = [
+  "#10b981", // Emerald
+  "#f59e0b", // Amber
+  "#38bdf8", // Sky
+  "#f43f5e", // Rose
+  "#a855f7", // Purple
+  "#ec4899", // Pink
+  "#eab308", // Yellow
+  "#14b8a6", // Teal
+  "#f97316", // Orange
+  "#6366f1", // Indigo
+  "#84cc16", // Lime
+  "#06b6d4", // Cyan
+  "#d946ef", // Fuchsia
+  "#fb7185", // Light Rose
+  "#34d399", // Mint
+  "#60a5fa"  // Blue
+];
+
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
   if (!container) return;
@@ -134,7 +154,7 @@ function renderDropdownSuggestions(query = "") {
   }
 }
 
-/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 35 Ô (5x7) */
+/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 35 Ô (5x7) + ĐÁNH MÀU & CẦU NỐI LIÊN KẾT CÙNG TÊN */
 function renderGameGridChest() {
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc && appState.accounts && appState.accounts.length > 0) {
@@ -153,27 +173,77 @@ function renderGameGridChest() {
 
   if (!container) return;
 
+  // Cấp bảng màu riêng biệt cho từng tên vật phẩm có trong rương này (độc lập mỗi rương)
+  const chestColorMap = new Map();
+  let colorIdx = 0;
+  const slots = (chest && chest.slots) ? chest.slots : [];
+
+  for (let i = 0; i < 35; i++) {
+    const itemName = slots[i]?.name;
+    if (itemName) {
+      const normKey = itemName.trim().toLowerCase();
+      if (!chestColorMap.has(normKey)) {
+        chestColorMap.set(normKey, ITEM_GROUP_COLORS[colorIdx % ITEM_GROUP_COLORS.length]);
+        colorIdx++;
+      }
+    }
+  }
+
   let filledCount = 0;
   container.innerHTML = "";
 
   // CHUẨN 35 Ô (5 cột x 7 hàng)
   for (let i = 0; i < 35; i++) {
-    const slot = (chest && chest.slots) ? chest.slots[i] : null;
+    const slot = slots[i] || null;
     const hasItem = slot && slot.name;
     if (hasItem) filledCount++;
 
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    cell.className = `game-slot-cell ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-emerald-400 border-transparent' : ''}`;
-    cell.title = hasItem ? `${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
+    cell.className = `game-slot-cell relative overflow-hidden ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
+    cell.title = hasItem ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
-      // Nếu ô bị nén ảnh cropImg, tự động lấy ảnh đầu tiên từ kho đã học để hiển thị
+      const normName = slot.name.trim().toLowerCase();
+      const groupColor = chestColorMap.get(normName) || "#10b981";
+
+      // Kiểm tra ô liền trước (i - 1) và liền sau (i + 1) xem có cùng tên không
+      const prevName = (i > 0 && slots[i - 1]?.name) ? slots[i - 1].name.trim().toLowerCase() : null;
+      const nextName = (i < 34 && slots[i + 1]?.name) ? slots[i + 1].name.trim().toLowerCase() : null;
+
+      const linkedLeft = (prevName === normName);
+      const linkedRight = (nextName === normName);
+      const isPartOfChain = linkedLeft || linkedRight;
+
+      // Viền ô mang màu đặc trưng của món đồ
+      if (!isSelected) {
+        cell.style.borderColor = groupColor;
+        cell.style.boxShadow = `inset 0 0 8px ${groupColor}33`;
+      }
+
       const learnedArr = appState.learnedIcons?.[slot.name];
       const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
       const displayImg = slot.cropImg || fallbackImg;
 
+      // Vẽ thanh liên kết & điểm nút ở mép trên cùng của ô
+      let linkOverlayHtml = "";
+      if (isPartOfChain) {
+        linkOverlayHtml = `
+          <div class="absolute top-0 left-0 right-0 h-1.5 pointer-events-none flex items-center z-10">
+            ${linkedLeft ? `<div class="h-[3px] flex-1" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>` : `<div class="flex-1"></div>`}
+            <div class="w-2 h-2 rounded-full shrink-0 border border-slate-950" style="background:${groupColor}; box-shadow: 0 0 6px ${groupColor};"></div>
+            ${linkedRight ? `<div class="h-[3px] flex-1" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>` : `<div class="flex-1"></div>`}
+          </div>
+        `;
+      } else {
+        // Ô đứng lẻ một mình (không nối với ô nào) -> hiện chấm màu đơn ở góc trên trái
+        linkOverlayHtml = `
+          <div class="absolute top-1 left-1 w-2 h-2 rounded-full pointer-events-none border border-slate-950 z-10" style="background:${groupColor};" title="Ô đơn lẻ (không nối cụm)"></div>
+        `;
+      }
+
       cell.innerHTML = `
+        ${linkOverlayHtml}
         <img src="${displayImg}" class="w-full h-full object-cover">
         <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
       `;
@@ -191,7 +261,7 @@ function renderGameGridChest() {
     countLabel.textContent = `${filledCount}/35 ô có đồ`;
   }
   
-  const curSlot = (chest && chest.slots) ? chest.slots[appState.selectedSlotIndex] : null;
+  const curSlot = slots[appState.selectedSlotIndex] || null;
   updateSidePanelInfo(appState.selectedSlotIndex, curSlot);
   
   // Đếm tổng số mẫu hình ảnh đã nạp vào bộ não AI
