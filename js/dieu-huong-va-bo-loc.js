@@ -68,7 +68,7 @@ function initNavigationAndFilterEvents() {
   if (tabSummaryBtn) tabSummaryBtn.onclick = () => setTab("summary");
   if (tabDiffBtn) tabDiffBtn.onclick = () => setTab("diff");
 
-  // 3. Bộ lọc Acc, Tìm kiếm, Ẩn Trang Bị, Đồ Bỏ Qua & Sắp Xếp Cột
+  // 3. Bộ lọc Acc, Tìm kiếm, Lọc Acc Báo Cáo, Ẩn Trang Bị, Đồ Bỏ Qua & Sắp Xếp Cột
   const filterAcc = document.getElementById("filterAccountSelect");
   if (filterAcc) {
     filterAcc.onchange = (e) => {
@@ -81,6 +81,15 @@ function initNavigationAndFilterEvents() {
   if (searchInp) {
     searchInp.oninput = (e) => {
       appState.searchQuery = e.target.value.trim();
+      renderAll();
+    };
+  }
+
+  const btnToggleReportAcc = document.getElementById("btnToggleFilterReportAcc");
+  if (btnToggleReportAcc) {
+    btnToggleReportAcc.onclick = () => {
+      appState.filterReportAccs = !appState.filterReportAccs;
+      saveBrainState();
       renderAll();
     };
   }
