@@ -200,7 +200,6 @@ function renderGameGridChest() {
 
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    // Bỏ overflow-hidden ở cell để icon link có thể nằm nổi đè lên khoảng hở giữa 2 ô
     cell.className = `game-slot-cell relative ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
     cell.title = hasItem ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
@@ -208,24 +207,20 @@ function renderGameGridChest() {
       const normName = slot.name.trim().toLowerCase();
       const groupColor = chestColorMap.get(normName) || "#10b981";
 
-      // Kiểm tra xem có phải cột cuối bên phải của hàng không (cột 5, 10, 15, 20, 25, 30, 35)
       const isEndOfRow = ((i + 1) % 5 === 0);
       const nextName = (!isEndOfRow && i < 34 && slots[i + 1]?.name) ? slots[i + 1].name.trim().toLowerCase() : null;
       const hasLinkRight = (nextName === normName);
 
-      // Viền ô mang màu đặc trưng của món đồ
       if (!isSelected) {
         cell.style.borderColor = groupColor;
       }
 
       const learnedArr = appState.learnedIcons?.[slot.name];
-      const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
-      const displayImg = slot.cropImg || fallbackImg;
+      const latestImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[learnedArr.length - 1].img : (learnedArr?.img || "");
+      const displayImg = slot.cropImg || latestImg;
 
-      // 1. Chấm tròn màu gọn gàng ở góc trên trái
       const dotHtml = `<div class="absolute top-1 left-1 w-2 h-2 rounded-full pointer-events-none border border-slate-950 z-10" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>`;
 
-      // 2. Icon mắt xích (Link) nằm chính giữa khoảng trống bên phải nối sang ô kế tiếp
       let linkIconHtml = "";
       if (hasLinkRight) {
         linkIconHtml = `
@@ -271,7 +266,6 @@ function renderGameGridChest() {
   }
   if (statTrained) statTrained.textContent = (appState.trainedNumberErrors || []).length;
 
-  // Render lại icon Lucide cho các mắt xích mới tạo
   if (window.lucide) lucide.createIcons();
 }
 
@@ -291,8 +285,8 @@ function updateSidePanelInfo(slotIdx, slotData) {
 
   if (img && emptyTxt) {
     const learnedArr = slotData?.name ? appState.learnedIcons?.[slotData.name] : null;
-    const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
-    const displayImg = slotData?.cropImg || fallbackImg;
+    const latestImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[learnedArr.length - 1].img : (learnedArr?.img || "");
+    const displayImg = slotData?.cropImg || latestImg;
 
     if (displayImg) {
       img.src = displayImg;
@@ -338,6 +332,32 @@ function renderAll() {
     filterSelect.value = appState.selectedAccFilter || "ALL";
   }
 
+  // Cập nhật trạng thái nút Ẩn Trang Bị
+  const btnHideEquip = document.getElementById("btnToggleHideEquip");
+  const lblHideEquip = document.getElementById("lblToggleHideEquip");
+  if (btnHideEquip && lblHideEquip) {
+    if (appState.hideEquipment) {
+      btnHideEquip.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-950/70 text-sky-300 border border-sky-500/60 transition";
+      lblHideEquip.textContent = "Ẩn Trang Bị: Bật";
+    } else {
+      btnHideEquip.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition";
+      lblHideEquip.textContent = "Ẩn Trang Bị: Tắt";
+    }
+  }
+
+  // Cập nhật trạng thái nút Hiện / Ẩn Đồ Đã Bỏ Qua
+  const btnShowIgnored = document.getElementById("btnToggleShowIgnored");
+  const lblShowIgnored = document.getElementById("lblToggleShowIgnored");
+  if (btnShowIgnored && lblShowIgnored) {
+    const ignoredCount = (appState.ignoredItems || []).length;
+    lblShowIgnored.textContent = `Đồ Bỏ Qua (${ignoredCount})`;
+    if (appState.showIgnored) {
+      btnShowIgnored.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-950/60 text-amber-300 border border-amber-500/60 transition";
+    } else {
+      btnShowIgnored.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-700 transition";
+    }
+  }
+
   // Cập nhật mũi tên chỉ hướng sắp xếp trên tiêu đề cột Tổng Số Lượng
   const sortQtyTh = document.getElementById("sortByQty");
   if (sortQtyTh) {
@@ -356,20 +376,29 @@ function renderAll() {
       if (emptyNotice) emptyNotice.classList.add("hidden");
       summary.forEach((item, idx) => {
         const tr = document.createElement("tr");
-        tr.className = `hover:bg-slate-800/40 transition border-b border-slate-800/60 ${item.isIgnored ? 'opacity-40' : ''}`;
+        tr.className = `hover:bg-slate-800/40 transition border-b border-slate-800/60 ${item.isIgnored ? 'opacity-45 bg-slate-950/40' : ''}`;
         const pills = Array.from(item.foundIn).map(f => `<span class="bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 mr-1 border border-slate-700">${f}</span>`).join("");
         
         const iconImg = item.icon ? `<img src="${item.icon}" class="w-8 h-8 rounded border border-slate-700 object-cover bg-slate-950">` : `<div class="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-600">✦</div>`;
 
+        const equipBadge = item.isEquipment 
+          ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] rounded bg-sky-950 text-sky-300 border border-sky-700/60 font-normal">Trang bị</span>` 
+          : "";
+        const ignoredBadge = item.isIgnored 
+          ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] rounded bg-rose-950 text-rose-300 border border-rose-700/60 font-normal">Đã ẩn</span>` 
+          : "";
+
+        const safeName = item.name.replace(/'/g, "\\'");
+
         tr.innerHTML = `
           <td class="py-3 px-4 text-center font-mono text-slate-500">${idx + 1}</td>
           <td class="py-2 px-4">${iconImg}</td>
-          <td class="py-3 px-4 font-semibold text-white">${item.name}</td>
+          <td class="py-3 px-4 font-semibold text-white">${item.name}${equipBadge}${ignoredBadge}</td>
           <td class="py-3 px-4 text-center"><span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">${item.stacks} ô</span></td>
           <td class="py-3 px-4 text-center">${pills}</td>
           <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm">${item.totalQty.toLocaleString('vi-VN')}</td>
           <td class="py-3 px-4 text-center">
-            <button onclick="toggleIgnoreItem('${item.name}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400">
+            <button onclick="toggleIgnoreItem('${safeName}')" title="${item.isIgnored ? 'Hiện lại trong Tổng Hợp Toàn Kho' : 'Bỏ qua (ẩn khỏi Tổng Hợp Toàn Kho)'}" class="p-1.5 rounded-lg transition ${item.isIgnored ? 'bg-amber-950/60 text-amber-400 hover:bg-amber-900' : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white'}">
               <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
             </button>
           </td>
@@ -382,6 +411,7 @@ function renderAll() {
   renderDiffView();
   if (window.lucide) lucide.createIcons();
 }
+
 function renderDiffView() {
   const incList = document.getElementById("diffIncreasedList");
   const decList = document.getElementById("diffDecreasedList");
