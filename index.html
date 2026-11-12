@@ -46,6 +46,12 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- Nút Cài Đặt Nâng Cao (ADK/TBQ & Phân loại Trang bị) -->
+        <button id="btnOpenAppSettings" title="Cấu hình phân loại vật phẩm & tài khoản" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 transition">
+          <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Cài Đặt</span>
+        </button>
+
         <!-- Nút Xuất file não bộ AI -->
         <button id="btnExportBrain" title="Tải file dữ liệu icon đã học về máy tính" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 transition">
           <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -142,7 +148,20 @@
           <select id="filterAccountSelect" class="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-emerald-400 font-semibold">
             <option value="ALL">Tất Cả Tài Khoản</option>
           </select>
-          <div class="relative flex-1 sm:w-52 min-w-[150px]">
+
+          <!-- Nút Ẩn / Hiện Trang Bị -->
+          <button id="btnToggleHideEquip" title="Bật/Tắt ẩn các món được đánh dấu là Trang Bị" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition">
+            <i data-lucide="shield-off" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span id="lblToggleHideEquip">Ẩn Trang Bị: Tắt</span>
+          </button>
+
+          <!-- Nút Hiện / Ẩn Vật Phẩm Đã Bỏ Qua -->
+          <button id="btnToggleShowIgnored" title="Xem hoặc ẩn các vật phẩm bạn đã bấm bỏ qua khỏi báo cáo" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-700 transition">
+            <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+            <span id="lblToggleShowIgnored">Đồ Bỏ Qua (0)</span>
+          </button>
+
+          <div class="relative flex-1 sm:w-44 min-w-[140px]">
             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
             <input type="text" id="searchInput" placeholder="Tìm vật phẩm..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-slate-200">
           </div>
@@ -269,7 +288,7 @@
                   <th class="py-3 px-4 text-center">Số Ô</th>
                   <th class="py-3 px-4 text-center">Tài Khoản & Rương Chứa</th>
                   <th class="py-3 px-4 text-right cursor-pointer hover:text-white" id="sortByQty"><div class="flex items-center justify-end gap-1">Tổng Số Lượng <i data-lucide="arrow-down" class="w-3 h-3 text-emerald-400"></i></div></th>
-                  <th class="py-3 px-4 text-center w-28">Thao Tác</th>
+                  <th class="py-3 px-4 text-center w-28">Ẩn / Hiện</th>
                 </tr>
               </thead>
               <tbody id="summaryTableBody" class="divide-y divide-slate-800/60 text-xs sm:text-sm"></tbody>
@@ -307,6 +326,52 @@
       </div>
     </section>
   </main>
+
+  <!-- MODAL: CÀI ĐẶT NÂNG CAO (TAB 1: ÂM DƯƠNG KÍNH / THIẾT BÁT QUÁI | TAB 2: PHÂN LOẠI TRANG BỊ) -->
+  <div id="appSettingsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#121922] border border-slate-700 w-full max-w-lg rounded-2xl p-5 shadow-2xl flex flex-col max-h-[90vh] space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-amber-400"></i>
+          <h3 class="text-sm font-bold text-white">Cài Đặt Quy Tắc Nhận Diện & Kho</h3>
+        </div>
+        <button id="btnCloseAppSettings" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <!-- Thanh chọn 2 Tab Cài Đặt -->
+      <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
+        <button id="settingsTabAdkBtn" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white transition">
+          1. Âm Dương Kính / Thiết Bát Quái
+        </button>
+        <button id="settingsTabEquipBtn" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+          2. Danh Sách Trang Bị (<span id="settingsEquipCount">0</span>)
+        </button>
+      </div>
+
+      <!-- NỘI DUNG TAB 1: CHỌN ACC BỎ QUA ÂM DƯƠNG KÍNH -->
+      <div id="settingsViewAdk" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div class="p-3 rounded-xl bg-amber-950/20 border border-amber-700/40 text-xs text-amber-200/90 leading-relaxed">
+          <b>Quy tắc phân biệt:</b> Tích chọn các tài khoản bạn không chứa <b>Âm Dương Kính</b>. Khi quét rương của các acc này, nếu AI nhận nhầm ra <i>Âm Dương Kính</i> thì hệ thống sẽ tự ép thành <b>Thiết Bát Quái</b>.
+        </div>
+        <div id="settingsAdkAccountList" class="space-y-2"></div>
+      </div>
+
+      <!-- NỘI DUNG TAB 2: TÍCH CHỌN CÁC VẬT PHẨM LÀ TRANG BỊ -->
+      <div id="settingsViewEquip" class="hidden flex-1 flex flex-col overflow-hidden space-y-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="settingsEquipSearch" placeholder="Tìm tên vật phẩm để đánh dấu là Trang Bị..." class="w-full pl-8 pr-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-sky-500">
+        </div>
+        <div id="settingsEquipItemList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72"></div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex justify-end">
+        <button id="btnDoneAppSettings" class="px-5 py-2 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg">
+          Xong & Lưu Cài Đặt
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: BƯỚC CĂN CHỈNH 4 CẠNH KHUNG LƯỚI 35 Ô (5×7) -->
   <div id="cropCalibrateModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
@@ -420,6 +485,7 @@
   <script src="js/state.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
