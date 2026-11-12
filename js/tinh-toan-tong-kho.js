@@ -2,8 +2,8 @@
 
 function calculateSummary() {
   const map = new Map();
-  const hasReportFilter = Array.isArray(appState.reportIncludedAccounts);
-  const allowedLower = hasReportFilter 
+  const isFilterAccActive = !!appState.filterReportAccs && Array.isArray(appState.reportIncludedAccounts);
+  const allowedLower = isFilterAccActive 
     ? appState.reportIncludedAccounts.map(a => a.trim().toLowerCase()) 
     : [];
 
@@ -11,8 +11,8 @@ function calculateSummary() {
     // 1. Lọc theo dropdown tài khoản cụ thể trên thanh công cụ
     if (appState.selectedAccFilter !== "ALL" && chest.account !== appState.selectedAccFilter) return;
 
-    // 2. Lọc theo cấu hình Tab 3 Cài Đặt (chỉ tính các acc được tích chọn khi xem Tất Cả)
-    if (appState.selectedAccFilter === "ALL" && hasReportFilter) {
+    // 2. Chỉ áp dụng lọc danh sách Acc Cài Đặt khi nút "Lọc Acc" đang BẬT
+    if (appState.selectedAccFilter === "ALL" && isFilterAccActive) {
       const accLower = (chest.account || "").trim().toLowerCase();
       if (!allowedLower.includes(accLower)) return;
     }
