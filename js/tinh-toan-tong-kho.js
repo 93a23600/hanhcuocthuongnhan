@@ -2,8 +2,21 @@
 
 function calculateSummary() {
   const map = new Map();
+  const hasReportFilter = Array.isArray(appState.reportIncludedAccounts);
+  const allowedLower = hasReportFilter 
+    ? appState.reportIncludedAccounts.map(a => a.trim().toLowerCase()) 
+    : [];
+
   appState.chests.forEach(chest => {
+    // 1. Lọc theo dropdown tài khoản cụ thể trên thanh công cụ
     if (appState.selectedAccFilter !== "ALL" && chest.account !== appState.selectedAccFilter) return;
+
+    // 2. Lọc theo cấu hình Tab 3 Cài Đặt (chỉ tính các acc được tích chọn khi xem Tất Cả)
+    if (appState.selectedAccFilter === "ALL" && hasReportFilter) {
+      const accLower = (chest.account || "").trim().toLowerCase();
+      if (!allowedLower.includes(accLower)) return;
+    }
+
     (chest.slots || []).forEach(slot => {
       if (!slot || !slot.name) return;
       const name = slot.name;
