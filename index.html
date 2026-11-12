@@ -87,11 +87,19 @@
             Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> dán ảnh rương (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
           </h3>
           <p class="text-xs text-slate-400 mt-1 max-w-md">Canvas sẽ căn chỉnh 35 ô (5×7), crop icon sắc nét và tạo giao diện rương chuẩn game.</p>
+          
           <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
             <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60">Tự cắt Icon từng ô</span>
-            <span id="readingBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold animate-pulse">
-              <i data-lucide="loader-2" class="w-3 h-3 inline animate-spin"></i> Đang cắt ô & AI nhận diện...
+            <span id="readingBadge" class="hidden px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold flex items-center gap-1.5">
+              <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>
+              <span id="progressStatusText">Đang xử lý...</span>
+              <span id="progressPercentText" class="font-mono font-bold text-emerald-400">0%</span>
             </span>
+          </div>
+
+          <!-- Thanh tiến trình trực quan (Progress Bar) -->
+          <div id="scanProgressBarContainer" class="hidden w-full max-w-sm mt-3 bg-slate-900 rounded-full h-2 border border-slate-700/80 overflow-hidden shadow-inner">
+            <div id="scanProgressBarFill" class="bg-gradient-to-r from-emerald-500 to-amber-400 h-full transition-all duration-300 ease-out" style="width: 0%"></div>
           </div>
         </div>
 
@@ -161,7 +169,7 @@
           <span class="text-slate-400 text-[11px] italic hidden sm:inline">Nhấp ô để sửa. Đổi tên 1 ô sẽ tự đổi toàn bộ các ô cùng icon.</span>
         </div>
 
-        <!-- Khung Flexbox CỐ ĐỊNH HÀNG NGANG (Không bị rớt xuống dưới khi co 1/2 màn hình) -->
+        <!-- Khung Flexbox CỐ ĐỊNH HÀNG NGANG -->
         <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
           
           <!-- Cột Trái: Rương 5x7 chuẩn gọn -->
@@ -240,7 +248,7 @@
             </div>
 
             <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
-              <span>Đã nhớ: <b id="statLearnedIcons" class="text-emerald-400">0</b> icon</span>
+              <span>Đã nhớ: <b id="statLearnedIcons" class="text-emerald-400">0</b> mẫu</span>
               <span>Mẫu số: <b id="statTrainedSamples" class="text-amber-400">0</b></span>
             </div>
           </div>
