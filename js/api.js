@@ -3,7 +3,7 @@ let currentCropRatios = { top: 0, bottom: 0, left: 0, right: 0 };
 let pendingImage = null;
 let pendingCrops = [];
 
-// 1. Tính mã băm hình ảnh 64-bit (DHash)
+// 1. Tính mã băm lõi trung tâm 64-bit (DHash) - Bỏ qua chữ số góc dưới & viền bị cắt lệch
 function computeImageHash(imgDataUrl) {
   return new Promise((resolve) => {
     if (!imgDataUrl) return resolve("");
@@ -15,7 +15,17 @@ function computeImageHash(imgDataUrl) {
         const ctx = cvs.getContext("2d");
         cvs.width = 9;
         cvs.height = 8;
-        ctx.drawImage(img, 0, 0, 9, 8);
+
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+
+        // Cắt lấy lõi trung tâm: bỏ 18% trái/phải, 14% trên, và bỏ 22% đáy (nơi chứa số x999)
+        const srcX = w * 0.18;
+        const srcY = h * 0.14;
+        const srcW = w * 0.64;
+        const srcH = h * 0.64;
+
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 9, 8);
         const data = ctx.getImageData(0, 0, 9, 8).data;
         let hash = "";
         for (let y = 0; y < 8; y++) {
@@ -117,25 +127,22 @@ function drawCalibrateGrid() {
   const w = Math.max(1, canvas.width - x - ((currentCropRatios.right / 100) * canvas.width));
   const h = Math.max(1, canvas.height - y - ((currentCropRatios.bottom / 100) * canvas.height));
 
-  // Vùng tối che viền ngoài
   ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
   ctx.fillRect(0, 0, canvas.width, y);
   ctx.fillRect(0, y + h, canvas.width, canvas.height - (y + h));
   ctx.fillRect(0, y, x, h);
   ctx.fillRect(x + w, y, canvas.width - (x + w), h);
 
-  // Khung viền ngoài
   ctx.strokeStyle = "#10b981";
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, w, h);
 
-  // Kẻ lưới chuẩn 5 CỘT x 7 HÀNG
   ctx.strokeStyle = "rgba(52, 211, 153, 0.8)";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 3]);
 
   const stepX = w / 5;
-  const stepY = h / 7; // Chia cho 7 hàng
+  const stepY = h / 7;
 
   for (let c = 1; c < 5; c++) {
     ctx.beginPath();
@@ -143,7 +150,7 @@ function drawCalibrateGrid() {
     ctx.lineTo(x + c * stepX, y + h);
     ctx.stroke();
   }
-  for (let r = 1; r < 7; r++) { // 7 hàng kẻ 6 đường ngang
+  for (let r = 1; r < 7; r++) {
     ctx.beginPath();
     ctx.moveTo(x, y + r * stepY);
     ctx.lineTo(x + w, y + r * stepY);
@@ -152,7 +159,7 @@ function drawCalibrateGrid() {
   ctx.setLineDash([]);
 }
 
-// 5. Cắt chính xác đúng 35 Ô (5 cột x 7 hàng)
+// 5. Cắt chính xác 35 Ô (5 cột x 7 hàng)
 function sliceGridWithRatios(imgElement, ratios) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -166,7 +173,7 @@ function sliceGridWithRatios(imgElement, ratios) {
   const activeH = totalH - startY - ((ratios.bottom / 100) * totalH);
 
   const stepX = activeW / 5;
-  const stepY = activeH / 7; // Chia 7 hàng
+  const stepY = activeH / 7;
 
   const crops = [];
   canvas.width = 90;
@@ -221,7 +228,7 @@ Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô (nếu ô
   return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 
-// 7. Thực thi nạp rương 35 ô
+// 7. Thực thi nạp rương 35 ô - Quét toàn bộ mảng mẫu đa hình (Multi-sample matching)
 async function executeUpload(accountName, chestTitle) {
   if (!pendingImage) return;
   const badge = document.getElementById("readingBadge");
@@ -246,17 +253,24 @@ async function executeUpload(accountName, chestTitle) {
       let assignedName = aiSlots[i]?.name || null;
       let assignedQty = aiSlots[i]?.qty || 0;
 
+      // So khớp với kho dữ liệu đa mẫu ảnh đã train
       if (crop && appState.learnedIcons) {
         const cropHash = await computeImageHash(crop);
         let bestMatchName = null;
         let lowestDist = 999;
 
-        for (const [learnedName, val] of Object.entries(appState.learnedIcons)) {
-          if (!val || !val.hash) continue;
-          const dist = getHammingDistance(cropHash, val.hash);
-          if (dist < lowestDist && dist <= 6) {
-            lowestDist = dist;
-            bestMatchName = learnedName;
+        for (const [learnedName, sampleList] of Object.entries(appState.learnedIcons)) {
+          // Hỗ trợ cả định dạng mảng mới lẫn định dạng đơn cũ
+          const samples = Array.isArray(sampleList) ? sampleList : (sampleList ? [sampleList] : []);
+          
+          for (const sample of samples) {
+            if (!sample || !sample.hash) continue;
+            const dist = getHammingDistance(cropHash, sample.hash);
+            // Ngưỡng sai số <= 7 giúp nhận diện chuẩn cả khi icon hơi lệch khung hoặc mờ
+            if (dist < lowestDist && dist <= 7) {
+              lowestDist = dist;
+              bestMatchName = learnedName;
+            }
           }
         }
         if (bestMatchName) assignedName = bestMatchName;
