@@ -117,14 +117,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (modal) modal.classList.add("hidden");
 
       if (typeof currentCropRatios !== "undefined" && typeof pendingRawImg !== "undefined" && pendingRawImg) {
-        // Lưu vĩnh viễn khung vào não bộ
         appState.learnedGridCrop = Object.assign({}, currentCropRatios);
         saveBrainState();
 
-        // Cắt đúng 35 ô theo tỉ lệ đã căn (5 cột x 7 hàng)
         pendingCrops = sliceGridWithRatios(pendingRawImg, currentCropRatios);
 
-        // Tạo ảnh preview vùng đã cắt gọn
         const cvs = document.createElement("canvas");
         const ctx = cvs.getContext("2d");
         const startX = (currentCropRatios.left / 100) * pendingRawImg.naturalWidth;
@@ -235,7 +232,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Lưu Thay Đổi Ô Bên Panel Phải & NẠP VĨNH VIỄN VÀO BỘ NÃO AI (QUÉT ĐỦ 35 Ô)
+  // 7. LƯU & NẠP NỐI TIẾP VÔ HẠN MẪU HÌNH ẢNH VÀO BỘ NÃO AI
   const btnSaveSide = document.getElementById("btnSaveSidePanel");
   if (btnSaveSide) {
     btnSaveSide.onclick = async function() {
@@ -249,7 +246,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const newName = nameInp ? nameInp.value.trim() : null;
       const newQty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
 
-      // Chuẩn khởi tạo 35 ô (5x7)
       if (!chest.slots) chest.slots = Array(35).fill(null);
       const targetSlot = chest.slots[idx] || {};
 
@@ -263,9 +259,26 @@ window.addEventListener("DOMContentLoaded", () => {
       if (newName && targetSlot.cropImg) {
         const hash = await computeImageHash(targetSlot.cropImg);
         
-        // Lưu vào não bộ vĩnh viễn
+        // Đảm bảo cấu trúc mảng đa mẫu ảnh cho tên vật phẩm này
         if (!appState.learnedIcons) appState.learnedIcons = {};
-        appState.learnedIcons[newName] = { img: targetSlot.cropImg, hash: hash };
+        if (!Array.isArray(appState.learnedIcons[newName])) {
+          const oldVal = appState.learnedIcons[newName];
+          appState.learnedIcons[newName] = oldVal ? [oldVal] : [];
+        }
+
+        // Kiểm tra xem mẫu ảnh mới này đã có trong mảng chưa (dist <= 2 nghĩa là giống hệt)
+        const isDuplicate = appState.learnedIcons[newName].some(
+          sample => sample && sample.hash && getHammingDistance(hash, sample.hash) <= 2
+        );
+
+        // Nạp nối tiếp mẫu mới vào danh sách (giữ nguyên toàn bộ các mẫu/góc khác đã học)
+        if (!isDuplicate) {
+          appState.learnedIcons[newName].push({
+            img: targetSlot.cropImg,
+            hash: hash,
+            addedAt: Date.now()
+          });
+        }
         
         if (!appState.customKnownItems) appState.customKnownItems = [];
         if (!appState.customKnownItems.includes(newName)) {
@@ -275,23 +288,28 @@ window.addEventListener("DOMContentLoaded", () => {
           KNOWN_ITEMS.push(newName);
         }
 
-        // Tự động đổi tất cả các ô có cùng icon trong toàn bộ 35 ô rương
+        // Quét đồng bộ tất cả 35 ô khớp với BẤT KỲ mẫu nào trong danh sách của tên này
+        const allSamplesForName = appState.learnedIcons[newName];
         let count = 1;
         for (let i = 0; i < 35; i++) {
           if (i === idx) continue;
           const other = chest.slots[i];
           if (other && other.cropImg) {
             const otherHash = await computeImageHash(other.cropImg);
-            if (getHammingDistance(hash, otherHash) <= 6) {
+            const matched = allSamplesForName.some(
+              sample => sample && sample.hash && getHammingDistance(otherHash, sample.hash) <= 7
+            );
+            if (matched) {
               other.name = newName;
               count++;
             }
           }
         }
 
-        saveBrainState();  // Lưu não
-        saveChestsState(); // Cập nhật rương
-        showToast(`Đã lưu vĩnh viễn [${newName}] và đồng bộ ${count} ô cùng icon!`, "success");
+        saveBrainState();
+        saveChestsState();
+        const totalSamples = appState.learnedIcons[newName].length;
+        showToast(`Đã train [${newName}] (đang có ${totalSamples} mẫu ảnh) & đồng bộ ${count} ô!`, "success");
       } else {
         saveChestsState();
         showToast(`Đã cập nhật ô ${idx + 1}!`, "success");
@@ -323,8 +341,8 @@ window.addEventListener("DOMContentLoaded", () => {
           itemName: slot.name || "Không rõ"
         });
 
-        saveBrainState();  // Lưu não vĩnh viễn
-        saveChestsState(); // Cập nhật rương
+        saveBrainState();
+        saveChestsState();
         showToast(`Đã nạp quy tắc số [${wrongQty} -> ${correctVal}] vào bộ nhớ AI!`, "success");
       }
     };
@@ -460,7 +478,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnReset = document.getElementById("btnResetAll");
   if (btnReset) {
     btnReset.onclick = function() {
-      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Tên icon, tỷ lệ căn viền và các số đã dạy AI vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
+      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Toàn bộ mẫu ảnh đã train, tỷ lệ căn viền và quy tắc số vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
         localStorage.removeItem(STORAGE_CHESTS_KEY);
         appState.chests = [];
         appState.accounts = [];
@@ -481,7 +499,10 @@ window.addEventListener("DOMContentLoaded", () => {
         customKnownItems: appState.customKnownItems,
         exportedAt: new Date().toLocaleString('vi-VN')
       };
-      const count = Object.keys(appState.learnedIcons || {}).length;
+      let totalSamples = 0;
+      Object.values(appState.learnedIcons || {}).forEach(arr => {
+        totalSamples += Array.isArray(arr) ? arr.length : 1;
+      });
       const blob = new Blob([JSON.stringify(brainData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -489,11 +510,11 @@ window.addEventListener("DOMContentLoaded", () => {
       a.download = `bo_nao_kiem_kho_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Đã xuất file não bộ (${count} icon đã học & khung viền chuẩn 35 ô)!`, "success");
+      showToast(`Đã xuất file não bộ (${totalSamples} mẫu ảnh đã train)!`, "success");
     };
   }
 
-  // 17. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT
+  // 17. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT (HỢP NHẤT ĐA MẪU)
   const inputImportBrain = document.getElementById("inputImportBrain");
   if (inputImportBrain) {
     inputImportBrain.onchange = (e) => {
@@ -506,13 +527,23 @@ window.addEventListener("DOMContentLoaded", () => {
           const imported = JSON.parse(event.target.result);
           if (imported.learnedIcons) {
             appState.learnedGridCrop = imported.learnedGridCrop || appState.learnedGridCrop;
-            appState.learnedIcons = Object.assign({}, appState.learnedIcons, imported.learnedIcons);
+            
+            // Hợp nhất mảng mẫu ảnh của từng tên vật phẩm
+            for (const [name, val] of Object.entries(imported.learnedIcons)) {
+              const incomingSamples = Array.isArray(val) ? val : (val ? [val] : []);
+              if (!Array.isArray(appState.learnedIcons[name])) {
+                const cur = appState.learnedIcons[name];
+                appState.learnedIcons[name] = cur ? [cur] : [];
+              }
+              appState.learnedIcons[name] = appState.learnedIcons[name].concat(incomingSamples);
+            }
+
             appState.trainedNumberErrors = (appState.trainedNumberErrors || []).concat(imported.trainedNumberErrors || []);
             appState.customKnownItems = Array.from(new Set([...(appState.customKnownItems || []), ...(imported.customKnownItems || [])]));
             
             saveBrainState();
             renderAll();
-            showToast(`Nạp não thành công! Hiện có ${Object.keys(appState.learnedIcons).length} icon trong bộ nhớ.`, "success");
+            showToast("Nạp & hợp nhất dữ liệu não bộ thành công!", "success");
           } else {
             alert("File không đúng định dạng não bộ của tool!");
           }
