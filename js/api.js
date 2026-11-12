@@ -240,7 +240,7 @@ function setScanProgress(percent, statusText) {
   if (barFill) barFill.style.width = `${p}%`;
 }
 
-// 7. Thực thi nạp rương 35 ô - Có hiển thị % tiến trình trực quan theo từng bước
+// 7. Thực thi nạp rương 35 ô - Có hiển thị % tiến trình & Quy tắc ADK/TBQ theo tài khoản
 async function executeUpload(accountName, chestTitle) {
   if (!pendingImage) return;
 
@@ -252,7 +252,6 @@ async function executeUpload(accountName, chestTitle) {
   let currentPercent = 5;
   setScanProgress(currentPercent, "Đang gửi ảnh lên Gemini AI...");
 
-  // Hiệu ứng tăng % mượt mà trong lúc chờ server Gemini phản hồi (từ 5% -> 65%)
   const fakeProgressTimer = setInterval(() => {
     if (currentPercent < 65) {
       currentPercent += Math.floor(Math.random() * 4) + 2;
@@ -276,9 +275,13 @@ async function executeUpload(accountName, chestTitle) {
     clearInterval(fakeProgressTimer);
     setScanProgress(70, "AI xong! Đang đối chiếu kho icon đã học...");
 
+    // Kiểm tra xem tài khoản này có bật chế độ bỏ qua Âm Dương Kính không
+    const ignoreAdkForThisAcc = (appState.noAdkAccounts || []).some(
+      acc => acc.trim().toLowerCase() === accountName.trim().toLowerCase()
+    );
+
     const finalSlots = [];
     for (let i = 0; i < 35; i++) {
-      // Tính % từ 70% đến 98% theo tiến độ quét từng ô (1/35 -> 35/35)
       const slotPercent = 70 + Math.round(((i + 1) / 35) * 28);
       setScanProgress(slotPercent, `Đang kiểm tra ô ${i + 1}/35...`);
 
@@ -305,6 +308,11 @@ async function executeUpload(accountName, chestTitle) {
           }
         }
         if (bestMatchName) assignedName = bestMatchName;
+      }
+
+      // Quy tắc Tab 1 Cài đặt: Nếu Acc này không dùng Âm Dương Kính -> tự động ép thành Thiết Bát Quái
+      if (assignedName && ignoreAdkForThisAcc && assignedName.trim().toLowerCase() === "âm dương kính") {
+        assignedName = "Thiết Bát Quái";
       }
 
       finalSlots.push({
