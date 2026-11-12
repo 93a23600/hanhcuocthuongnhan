@@ -10,8 +10,9 @@ function initBackupAndUtilityEvents() {
         if (s && s.name) snap[s.name] = (snap[s.name] || 0) + (parseInt(s.qty) || 0);
       }));
       appState.snapshot = snap;
+      appState.snapshotAt = Date.now();
       saveChestsState();
-      showToast("Đã lưu mốc snapshot đối chiếu thành công!", "success");
+      showToast("Đã lưu mốc snapshot đối chiếu & bắt đầu tính tiêu hao/tuần!", "success");
     };
   }
 
@@ -20,6 +21,7 @@ function initBackupAndUtilityEvents() {
     btnClearSnap.onclick = () => {
       if (confirm("Xoá mốc so sánh hiện tại?")) {
         appState.snapshot = null;
+        appState.snapshotAt = null;
         saveChestsState();
         showToast("Đã xoá mốc so sánh", "info");
       }
