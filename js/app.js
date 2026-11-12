@@ -6,7 +6,7 @@ window.toggleIgnoreItem = function(name) {
     showToast(`Đã theo dõi lại [${name}]`, "info");
   } else {
     appState.ignoredItems.push(name);
-    showToast(`Đã bỏ qua [${name}]`, "info");
+    showToast(`Đã ẩn [${name}] khỏi Tổng Hợp Toàn Kho`, "info");
   }
   saveChestsState();
 };
@@ -259,26 +259,21 @@ window.addEventListener("DOMContentLoaded", () => {
       if (newName && targetSlot.cropImg) {
         const hash = await computeImageHash(targetSlot.cropImg);
         
-        // Đảm bảo cấu trúc mảng đa mẫu ảnh cho tên vật phẩm này
         if (!appState.learnedIcons) appState.learnedIcons = {};
         if (!Array.isArray(appState.learnedIcons[newName])) {
           const oldVal = appState.learnedIcons[newName];
           appState.learnedIcons[newName] = oldVal ? [oldVal] : [];
         }
 
-        // Kiểm tra xem mẫu ảnh mới này đã có trong mảng chưa (dist <= 2 nghĩa là giống hệt)
-        const isDuplicate = appState.learnedIcons[newName].some(
-          sample => sample && sample.hash && getHammingDistance(hash, sample.hash) <= 2
+        // Xóa mẫu cũ nếu bị trùng hệt (dist <= 2) và đẩy mẫu vừa cập nhật xuống CUỐI MẢNG để làm icon đại diện mới nhất
+        appState.learnedIcons[newName] = appState.learnedIcons[newName].filter(
+          sample => !(sample && sample.hash && getHammingDistance(hash, sample.hash) <= 2)
         );
-
-        // Nạp nối tiếp mẫu mới vào danh sách (giữ nguyên toàn bộ các mẫu/góc khác đã học)
-        if (!isDuplicate) {
-          appState.learnedIcons[newName].push({
-            img: targetSlot.cropImg,
-            hash: hash,
-            addedAt: Date.now()
-          });
-        }
+        appState.learnedIcons[newName].push({
+          img: targetSlot.cropImg,
+          hash: hash,
+          addedAt: Date.now()
+        });
         
         if (!appState.customKnownItems) appState.customKnownItems = [];
         if (!appState.customKnownItems.includes(newName)) {
@@ -309,7 +304,7 @@ window.addEventListener("DOMContentLoaded", () => {
         saveBrainState();
         saveChestsState();
         const totalSamples = appState.learnedIcons[newName].length;
-        showToast(`Đã train [${newName}] (đang có ${totalSamples} mẫu ảnh) & đồng bộ ${count} ô!`, "success");
+        showToast(`Đã train [${newName}] (${totalSamples} mẫu) & cập nhật icon đại diện mới nhất!`, "success");
       } else {
         saveChestsState();
         showToast(`Đã cập nhật ô ${idx + 1}!`, "success");
@@ -419,7 +414,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (tabSummaryBtn) tabSummaryBtn.onclick = () => setTab("summary");
   if (tabDiffBtn) tabDiffBtn.onclick = () => setTab("diff");
 
-  // 12. Bộ lọc Acc & Tìm kiếm
+  // 12. Bộ lọc Acc, Tìm kiếm, Lọc Trang Bị / Đồ Bỏ Qua & Sắp Xếp Cột
   const filterAcc = document.getElementById("filterAccountSelect");
   if (filterAcc) {
     filterAcc.onchange = (e) => {
@@ -432,6 +427,52 @@ window.addEventListener("DOMContentLoaded", () => {
   if (searchInp) {
     searchInp.oninput = (e) => {
       appState.searchQuery = e.target.value.trim();
+      renderAll();
+    };
+  }
+
+  // Nút bật/tắt Ẩn Trang Bị ở Tổng Hợp Toàn Kho
+  const btnToggleEquip = document.getElementById("btnToggleHideEquip");
+  if (btnToggleEquip) {
+    btnToggleEquip.onclick = () => {
+      appState.hideEquipment = !appState.hideEquipment;
+      saveBrainState();
+      renderAll();
+    };
+  }
+
+  // Nút bật/tắt Hiện Đồ Đã Bỏ Qua ở Tổng Hợp Toàn Kho
+  const btnToggleIgnored = document.getElementById("btnToggleShowIgnored");
+  if (btnToggleIgnored) {
+    btnToggleIgnored.onclick = () => {
+      appState.showIgnored = !appState.showIgnored;
+      renderAll();
+    };
+  }
+
+  // Sắp xếp bảng Tổng Hợp Toàn Kho khi click tiêu đề cột
+  const sortByQtyBtn = document.getElementById("sortByQty");
+  if (sortByQtyBtn) {
+    sortByQtyBtn.onclick = () => {
+      if (appState.sortBy === "qty") {
+        appState.sortDesc = !appState.sortDesc;
+      } else {
+        appState.sortBy = "qty";
+        appState.sortDesc = false;
+      }
+      renderAll();
+    };
+  }
+
+  const sortByNameBtn = document.getElementById("sortByName");
+  if (sortByNameBtn) {
+    sortByNameBtn.onclick = () => {
+      if (appState.sortBy === "name") {
+        appState.sortDesc = !appState.sortDesc;
+      } else {
+        appState.sortBy = "name";
+        appState.sortDesc = false;
+      }
       renderAll();
     };
   }
@@ -478,7 +519,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnReset = document.getElementById("btnResetAll");
   if (btnReset) {
     btnReset.onclick = function() {
-      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Toàn bộ mẫu ảnh đã train, tỷ lệ căn viền và quy tắc số vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
+      if (confirm("Chỉ xóa dữ liệu ảnh các rương hiện có? (Toàn bộ mẫu ảnh đã train, cấu hình cài đặt, tỷ lệ căn viền và quy tắc số vẫn được GIỮ NGUYÊN TUYỆT ĐỐI). Tiếp tục?")) {
         localStorage.removeItem(STORAGE_CHESTS_KEY);
         appState.chests = [];
         appState.accounts = [];
@@ -497,6 +538,9 @@ window.addEventListener("DOMContentLoaded", () => {
         learnedIcons: appState.learnedIcons,
         trainedNumberErrors: appState.trainedNumberErrors,
         customKnownItems: appState.customKnownItems,
+        noAdkAccounts: appState.noAdkAccounts,
+        equipmentItems: appState.equipmentItems,
+        hideEquipment: appState.hideEquipment,
         exportedAt: new Date().toLocaleString('vi-VN')
       };
       let totalSamples = 0;
@@ -510,11 +554,11 @@ window.addEventListener("DOMContentLoaded", () => {
       a.download = `bo_nao_kiem_kho_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast(`Đã xuất file não bộ (${totalSamples} mẫu ảnh đã train)!`, "success");
+      showToast(`Đã xuất file não bộ (${totalSamples} mẫu ảnh & cấu hình cài đặt)!`, "success");
     };
   }
 
-  // 17. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT (HỢP NHẤT ĐA MẪU)
+  // 17. NẠP BỘ NÃO AI TỪ FILE JSON VÀO TRÌNH DUYỆT
   const inputImportBrain = document.getElementById("inputImportBrain");
   if (inputImportBrain) {
     inputImportBrain.onchange = (e) => {
@@ -528,7 +572,6 @@ window.addEventListener("DOMContentLoaded", () => {
           if (imported.learnedIcons) {
             appState.learnedGridCrop = imported.learnedGridCrop || appState.learnedGridCrop;
             
-            // Hợp nhất mảng mẫu ảnh của từng tên vật phẩm
             for (const [name, val] of Object.entries(imported.learnedIcons)) {
               const incomingSamples = Array.isArray(val) ? val : (val ? [val] : []);
               if (!Array.isArray(appState.learnedIcons[name])) {
@@ -540,6 +583,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
             appState.trainedNumberErrors = (appState.trainedNumberErrors || []).concat(imported.trainedNumberErrors || []);
             appState.customKnownItems = Array.from(new Set([...(appState.customKnownItems || []), ...(imported.customKnownItems || [])]));
+            appState.noAdkAccounts = Array.from(new Set([...(appState.noAdkAccounts || []), ...(imported.noAdkAccounts || [])]));
+            appState.equipmentItems = Array.from(new Set([...(appState.equipmentItems || []), ...(imported.equipmentItems || [])]));
+            if (typeof imported.hideEquipment === "boolean") appState.hideEquipment = imported.hideEquipment;
             
             saveBrainState();
             renderAll();
@@ -556,7 +602,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 18. Modal API Key
+  // 18. Modal API Key & Modal Cài Đặt Nâng Cao
   const configModal = document.getElementById("configModal");
   const inputApiKey = document.getElementById("inputApiKey");
   const btnOpenCfg = document.getElementById("btnOpenConfig");
@@ -592,6 +638,11 @@ window.addEventListener("DOMContentLoaded", () => {
       updateApiKeyUI();
       showToast("Đã xoá API Key", "info");
     };
+  }
+
+  // Khởi tạo module cài đặt riêng (js/settings.js)
+  if (typeof initSettingsModal === "function") {
+    initSettingsModal();
   }
 
   renderAll();
