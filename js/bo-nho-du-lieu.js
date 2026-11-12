@@ -12,6 +12,7 @@ let appState = {
   trainedNumberErrors: [],
   customKnownItems: [],
   noAdkAccounts: [],
+  reportIncludedAccounts: null, // null = tính tất cả; Array = chỉ tính các acc trong mảng
   equipmentItems: [],
   hideEquipment: false,
   ignoredItems: [],
