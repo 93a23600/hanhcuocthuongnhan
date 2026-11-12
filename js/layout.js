@@ -94,7 +94,7 @@
       <!-- Tabs Điều Hướng -->
       <section class="space-y-4">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-         <div id="mainTabBar" class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm shrink-0">
+          <div id="mainTabBar" class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm shrink-0">
             <button id="tabGameGridBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
               <i data-lucide="layout-grid" class="w-4 h-4 text-amber-300"></i>
               <span>Rương</span>
@@ -113,10 +113,6 @@
             <select id="filterAccountSelect" class="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700/80 rounded-lg text-emerald-400 font-semibold">
               <option value="ALL">Tất Cả Tài Khoản</option>
             </select>
-            <button id="btnToggleHideEquip" title="Bật/Tắt ẩn các món được đánh dấu là Trang Bị" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition">
-              <i data-lucide="shield-off" class="w-3.5 h-3.5 text-sky-400"></i>
-              <span id="lblToggleHideEquip">Ẩn Trang Bị: Tắt</span>
-            </button>
             <button id="btnToggleFilterReportAcc" title="Bật/Tắt chỉ tính các tài khoản đã tích chọn trong Cài Đặt" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition">
               <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-400"></i>
               <span id="lblToggleFilterReportAcc">Lọc Acc: Tắt</span>
