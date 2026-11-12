@@ -310,9 +310,14 @@ async function executeUpload(accountName, chestTitle) {
         if (bestMatchName) assignedName = bestMatchName;
       }
 
-      // Quy tắc Tab 1 Cài đặt: Nếu Acc này không dùng Âm Dương Kính -> tự động ép thành Thiết Bát Quái
-      if (assignedName && ignoreAdkForThisAcc && assignedName.trim().toLowerCase() === "âm dương kính") {
-        assignedName = "Thiết Bát Quái";
+     // Quy tắc 2 chiều ADK / TBQ theo cấu hình tài khoản:
+      // - Acc được tích chọn -> ép thành "Thiết Bát Quái"
+      // - Acc không tích chọn -> ép thành "Âm Dương Kính"
+      if (assignedName) {
+        const lowerAssigned = assignedName.trim().toLowerCase();
+        if (lowerAssigned === "âm dương kính" || lowerAssigned === "thiết bát quái") {
+          assignedName = ignoreAdkForThisAcc ? "Thiết Bát Quái" : "Âm Dương Kính";
+        }
       }
 
       finalSlots.push({
