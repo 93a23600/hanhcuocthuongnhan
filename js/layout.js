@@ -94,18 +94,18 @@
       <!-- Tabs Điều Hướng -->
       <section class="space-y-4">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div id="mainTabBar" class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-x-auto">
+         <div id="mainTabBar" class="flex p-1 rounded-xl bg-slate-900 border border-slate-800 text-sm shrink-0">
             <button id="tabGameGridBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 bg-emerald-600 text-white shadow whitespace-nowrap">
               <i data-lucide="layout-grid" class="w-4 h-4 text-amber-300"></i>
-              <span>Rương Game Thực Tế (5×7)</span>
+              <span>Rương</span>
             </button>
             <button id="tabSummaryBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
               <i data-lucide="boxes" class="w-4 h-4"></i>
-              <span>Tổng Hợp Toàn Kho</span>
+              <span>Báo Cáo</span>
             </button>
             <button id="tabDiffBtn" class="px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-2 text-slate-400 hover:text-white whitespace-nowrap">
               <i data-lucide="trending-up-down" class="w-4 h-4 text-amber-400"></i>
-              <span>Biến Động Hao / Đầy</span>
+              <span>Biến Động</span>
             </button>
           </div>
 
