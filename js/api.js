@@ -228,27 +228,60 @@ Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô (nếu ô
   return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 
-// 7. Thực thi nạp rương 35 ô - Quét toàn bộ mảng mẫu đa hình (Multi-sample matching)
+// Hàm điều khiển hiển thị thanh tiến trình %
+function setScanProgress(percent, statusText) {
+  const p = Math.min(100, Math.max(0, Math.round(percent)));
+  const statusEl = document.getElementById("progressStatusText");
+  const percentEl = document.getElementById("progressPercentText");
+  const barFill = document.getElementById("scanProgressBarFill");
+
+  if (statusEl && statusText) statusEl.textContent = statusText;
+  if (percentEl) percentEl.textContent = `${p}%`;
+  if (barFill) barFill.style.width = `${p}%`;
+}
+
+// 7. Thực thi nạp rương 35 ô - Có hiển thị % tiến trình trực quan theo từng bước
 async function executeUpload(accountName, chestTitle) {
   if (!pendingImage) return;
+
   const badge = document.getElementById("readingBadge");
+  const barContainer = document.getElementById("scanProgressBarContainer");
   if (badge) badge.classList.remove("hidden");
-  showToast(`Đang phân tích rương 35 ô [${accountName} - ${chestTitle}]...`, "info");
+  if (barContainer) barContainer.classList.remove("hidden");
+
+  let currentPercent = 5;
+  setScanProgress(currentPercent, "Đang gửi ảnh lên Gemini AI...");
+
+  // Hiệu ứng tăng % mượt mà trong lúc chờ server Gemini phản hồi (từ 5% -> 65%)
+  const fakeProgressTimer = setInterval(() => {
+    if (currentPercent < 65) {
+      currentPercent += Math.floor(Math.random() * 4) + 2;
+      if (currentPercent > 65) currentPercent = 65;
+      setScanProgress(currentPercent, "AI đang đọc vật phẩm & số lượng...");
+    }
+  }, 450);
 
   try {
     let aiSlots = [];
     if (appState.apiKey) {
       aiSlots = await analyzeChestWithGemini(pendingImage.base64);
     } else {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 800));
       aiSlots = Array.from({ length: 35 }, (_, i) => ({
         name: i < 15 ? (KNOWN_ITEMS[i] || "Vật phẩm") : null,
         qty: i < 15 ? 999 : 0
       }));
     }
 
+    clearInterval(fakeProgressTimer);
+    setScanProgress(70, "AI xong! Đang đối chiếu kho icon đã học...");
+
     const finalSlots = [];
     for (let i = 0; i < 35; i++) {
+      // Tính % từ 70% đến 98% theo tiến độ quét từng ô (1/35 -> 35/35)
+      const slotPercent = 70 + Math.round(((i + 1) / 35) * 28);
+      setScanProgress(slotPercent, `Đang kiểm tra ô ${i + 1}/35...`);
+
       const crop = pendingCrops[i] || null;
       let assignedName = aiSlots[i]?.name || null;
       let assignedQty = aiSlots[i]?.qty || 0;
@@ -260,13 +293,11 @@ async function executeUpload(accountName, chestTitle) {
         let lowestDist = 999;
 
         for (const [learnedName, sampleList] of Object.entries(appState.learnedIcons)) {
-          // Hỗ trợ cả định dạng mảng mới lẫn định dạng đơn cũ
           const samples = Array.isArray(sampleList) ? sampleList : (sampleList ? [sampleList] : []);
           
           for (const sample of samples) {
             if (!sample || !sample.hash) continue;
             const dist = getHammingDistance(cropHash, sample.hash);
-            // Ngưỡng sai số <= 7 giúp nhận diện chuẩn cả khi icon hơi lệch khung hoặc mờ
             if (dist < lowestDist && dist <= 7) {
               lowestDist = dist;
               bestMatchName = learnedName;
@@ -283,6 +314,8 @@ async function executeUpload(accountName, chestTitle) {
         aiOriginalQty: assignedQty
       });
     }
+
+    setScanProgress(99, "Đang lưu dữ liệu rương...");
 
     if (!appState.accounts.includes(accountName)) {
       appState.accounts.push(accountName);
@@ -307,11 +340,17 @@ async function executeUpload(accountName, chestTitle) {
     appState.selectedSlotIndex = 0;
 
     saveChestsState();
+    setScanProgress(100, "Hoàn tất!");
     showToast(`Đã nạp xong rương [${accountName} - ${chestTitle}] (35 ô)!`, "success");
   } catch (err) {
+    clearInterval(fakeProgressTimer);
     showToast("Lỗi phân tích: " + err.message, "error");
   } finally {
-    if (badge) badge.classList.add("hidden");
+    setTimeout(() => {
+      if (badge) badge.classList.add("hidden");
+      if (barContainer) barContainer.classList.add("hidden");
+      setScanProgress(0, "");
+    }, 800);
     pendingImage = null;
     pendingCrops = [];
   }
