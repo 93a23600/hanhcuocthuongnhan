@@ -338,6 +338,14 @@ function renderAll() {
     filterSelect.value = appState.selectedAccFilter || "ALL";
   }
 
+  // Cập nhật mũi tên chỉ hướng sắp xếp trên tiêu đề cột Tổng Số Lượng
+  const sortQtyTh = document.getElementById("sortByQty");
+  if (sortQtyTh) {
+    const arrowIcon = appState.sortDesc ? "arrow-down" : "arrow-up";
+    const labelText = appState.sortDesc ? "Tổng Số Lượng (Nhiều → Ít)" : "Tổng Số Lượng (Ít → Nhiều)";
+    sortQtyTh.innerHTML = `<div class="flex items-center justify-end gap-1 select-none">${labelText} <i data-lucide="${arrowIcon}" class="w-3.5 h-3.5 text-emerald-400"></i></div>`;
+  }
+
   const tbody = document.getElementById("summaryTableBody");
   const emptyNotice = document.getElementById("emptySummaryNotice");
   if (tbody) {
@@ -374,7 +382,6 @@ function renderAll() {
   renderDiffView();
   if (window.lucide) lucide.createIcons();
 }
-
 function renderDiffView() {
   const incList = document.getElementById("diffIncreasedList");
   const decList = document.getElementById("diffDecreasedList");
