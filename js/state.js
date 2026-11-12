@@ -140,7 +140,7 @@ function saveState() {
   saveChestsState();
 }
 
-// 4. Tính toán tổng hợp toàn kho (Tương thích mảng đa mẫu ảnh)
+// 4. Tính toán tổng hợp toàn kho
 function calculateSummary() {
   const map = new Map();
   appState.chests.forEach(chest => {
@@ -150,7 +150,6 @@ function calculateSummary() {
       const name = slot.name;
       const qty = parseInt(slot.qty) || 0;
       if (!map.has(name)) {
-        // Lấy ảnh đại diện từ rương hoặc mẫu đầu tiên trong mảng đã học
         const learnedArr = appState.learnedIcons[name];
         const fallbackIcon = (Array.isArray(learnedArr) && learnedArr.length > 0) ? learnedArr[0].img : null;
 
@@ -166,7 +165,10 @@ function calculateSummary() {
       const item = map.get(name);
       item.totalQty += qty;
       item.stacks += 1;
-      item.foundIn.add(`${chest.account} (${chest.title})`);
+
+      // Viết tắt "Rương 1" -> "r1", "Rương 2" -> "r2"...
+      const shortChestTitle = chest.title.replace(/^rương\s*/i, "r");
+      item.foundIn.add(`${chest.account} (${shortChestTitle})`);
     });
   });
 
@@ -178,6 +180,12 @@ function calculateSummary() {
   if (!appState.showIgnored) {
     res = res.filter(i => !i.isIgnored);
   }
-  res.sort((a, b) => appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty);
+
+  // Sắp xếp theo tên hoặc theo số lượng (tăng / giảm dần)
+  if (appState.sortBy === "name") {
+    res.sort((a, b) => appState.sortDesc ? b.name.localeCompare(a.name, 'vi') : a.name.localeCompare(b.name, 'vi'));
+  } else {
+    res.sort((a, b) => appState.sortDesc ? b.totalQty - a.totalQty : a.totalQty - b.totalQty);
+  }
   return res;
 }
