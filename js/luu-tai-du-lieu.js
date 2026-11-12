@@ -44,6 +44,7 @@ function loadState() {
       appState.chests = parsedChests.chests || [];
       appState.ignoredItems = parsedChests.ignoredItems || [];
       appState.snapshot = parsedChests.snapshot || null;
+      appState.snapshotAt = parsedChests.snapshotAt || (parsedChests.snapshot ? Date.now() : null);
       
       if (appState.accounts.length > 0 && !appState.viewingAcc) {
         appState.viewingAcc = appState.accounts[0];
@@ -60,7 +61,8 @@ function saveChestsState() {
       accounts: appState.accounts,
       chests: appState.chests,
       ignoredItems: appState.ignoredItems,
-      snapshot: appState.snapshot
+      snapshot: appState.snapshot,
+      snapshotAt: appState.snapshotAt
     }));
   } catch (err) {
     console.warn("Cảnh báo: Bộ nhớ rương bị đầy, đang tối ưu lược bớt ảnh cũ...", err);
@@ -78,7 +80,8 @@ function saveChestsState() {
         accounts: appState.accounts,
         chests: slimChests,
         ignoredItems: appState.ignoredItems,
-        snapshot: appState.snapshot
+        snapshot: appState.snapshot,
+        snapshotAt: appState.snapshotAt
       }));
     } catch (e) {
       alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' để sao lưu.");
