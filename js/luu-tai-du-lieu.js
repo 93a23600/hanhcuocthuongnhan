@@ -22,6 +22,7 @@ function loadState() {
       appState.customKnownItems = parsedBrain.customKnownItems || [];
       appState.noAdkAccounts = parsedBrain.noAdkAccounts || [];
       appState.reportIncludedAccounts = Array.isArray(parsedBrain.reportIncludedAccounts) ? parsedBrain.reportIncludedAccounts : null;
+      appState.filterReportAccs = !!parsedBrain.filterReportAccs;
       appState.equipmentItems = parsedBrain.equipmentItems || [];
       appState.hideEquipment = !!parsedBrain.hideEquipment;
       
@@ -101,6 +102,7 @@ function saveBrainState() {
       customKnownItems: appState.customKnownItems,
       noAdkAccounts: appState.noAdkAccounts,
       reportIncludedAccounts: appState.reportIncludedAccounts,
+      filterReportAccs: appState.filterReportAccs,
       equipmentItems: appState.equipmentItems,
       hideEquipment: appState.hideEquipment
     }));
