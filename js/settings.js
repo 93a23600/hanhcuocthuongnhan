@@ -1,5 +1,30 @@
 /* MODULE CÀI ĐẶT NÂNG CAO (js/settings.js) */
 
+function applyAdkTbqRuleToAllChests() {
+  if (!appState.chests || !Array.isArray(appState.chests)) return;
+  const tbqAccounts = (appState.noAdkAccounts || []).map(a => a.trim().toLowerCase());
+  let changed = false;
+
+  appState.chests.forEach(chest => {
+    const isTbqAcc = tbqAccounts.includes((chest.account || "").trim().toLowerCase());
+    (chest.slots || []).forEach(slot => {
+      if (!slot || !slot.name) return;
+      const lowerName = slot.name.trim().toLowerCase();
+      if (lowerName === "âm dương kính" || lowerName === "thiết bát quái") {
+        const targetName = isTbqAcc ? "Thiết Bát Quái" : "Âm Dương Kính";
+        if (slot.name !== targetName) {
+          slot.name = targetName;
+          changed = true;
+        }
+      }
+    });
+  });
+
+  if (changed && typeof saveChestsState === "function") {
+    saveChestsState();
+  }
+}
+
 function initSettingsModal() {
   const btnOpen = document.getElementById("btnOpenAppSettings");
   const btnClose = document.getElementById("btnCloseAppSettings");
@@ -24,6 +49,7 @@ function initSettingsModal() {
   const closeModal = () => {
     if (modal) modal.classList.add("hidden");
     saveBrainState();
+    applyAdkTbqRuleToAllChests();
     renderAll();
   };
 
@@ -53,7 +79,7 @@ function initSettingsModal() {
   }
 }
 
-/* TAB 1: CẤU HÌNH BỎ QUA ÂM DƯƠNG KÍNH THEO TỪNG TÀI KHOẢN */
+/* TAB 1: PHÂN LOẠI TÀI KHOẢN CHỨA THIẾT BÁT QUÁI VS ÂM DƯƠNG KÍNH */
 function renderSettingsAdkTab() {
   const listEl = document.getElementById("settingsAdkAccountList");
   if (!listEl) return;
@@ -69,13 +95,13 @@ function renderSettingsAdkTab() {
   listEl.innerHTML = accounts.map(acc => {
     const isChecked = appState.noAdkAccounts.includes(acc);
     return `
-      <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border ${isChecked ? 'border-amber-500/60 bg-amber-950/10' : 'border-slate-800'} cursor-pointer hover:border-slate-700 transition">
+      <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border ${isChecked ? 'border-amber-500/60 bg-amber-950/10' : 'border-emerald-500/30 bg-emerald-950/5'} cursor-pointer hover:border-slate-600 transition">
         <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold text-xs uppercase">${acc.slice(0, 2)}</div>
+          <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center ${isChecked ? 'text-amber-400' : 'text-emerald-400'} font-bold text-xs uppercase">${acc.slice(0, 2)}</div>
           <div>
             <span class="text-xs font-bold text-white block">${acc}</span>
-            <span class="text-[10px] ${isChecked ? 'text-amber-400' : 'text-slate-500'}">
-              ${isChecked ? 'Đang bật: Tự ép Âm Dương Kính → Thiết Bát Quái' : 'Bình thường (Nhận diện cả 2)'}
+            <span class="text-[10px] ${isChecked ? 'text-amber-400 font-semibold' : 'text-emerald-400'}">
+              ${isChecked ? 'Đã tích: Chứa Thiết Bát Quái (ép tất cả → Thiết Bát Quái)' : 'Không tích: Mặc định là Âm Dương Kính (ép tất cả → Âm Dương Kính)'}
             </span>
           </div>
         </div>
@@ -93,6 +119,7 @@ function renderSettingsAdkTab() {
         appState.noAdkAccounts = appState.noAdkAccounts.filter(a => a !== acc);
       }
       saveBrainState();
+      applyAdkTbqRuleToAllChests();
       renderSettingsAdkTab();
     };
   });
