@@ -99,7 +99,6 @@ function openCalibrateModal() {
   if (window.lucide) lucide.createIcons();
 }
 
-
 function updateRangeLabels() {
   const elTop = document.getElementById("valCropTop");
   const elBottom = document.getElementById("valCropBottom");
@@ -111,32 +110,7 @@ function updateRangeLabels() {
   if (elLeft) elLeft.textContent = `${currentCropRatios.left}%`;
   if (elRight) elRight.textContent = `${currentCropRatios.right}%`;
 }
-// Sắp xếp bảng Tổng Hợp Toàn Kho khi click tiêu đề cột
-  const sortByQtyBtn = document.getElementById("sortByQty");
-  if (sortByQtyBtn) {
-    sortByQtyBtn.onclick = () => {
-      if (appState.sortBy === "qty") {
-        appState.sortDesc = !appState.sortDesc; // Đảo chiều Ít <-> Nhiều
-      } else {
-        appState.sortBy = "qty";
-        appState.sortDesc = false; // Ưu tiên hiện đồ ít nhất (gần hết) lên đầu
-      }
-      renderAll();
-    };
-  }
 
-  const sortByNameBtn = document.getElementById("sortByName");
-  if (sortByNameBtn) {
-    sortByNameBtn.onclick = () => {
-      if (appState.sortBy === "name") {
-        appState.sortDesc = !appState.sortDesc;
-      } else {
-        appState.sortBy = "name";
-        appState.sortDesc = false;
-      }
-      renderAll();
-    };
-  }
 // 4. Vẽ lưới 5 CỘT x 7 HÀNG (35 Ô)
 function drawCalibrateGrid() {
   const canvas = document.getElementById("calibrateCanvas");
