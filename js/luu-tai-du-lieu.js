@@ -1,7 +1,6 @@
 /* MODULE: NẠP & LƯU TRỮ LOCALSTORAGE (js/luu-tai-du-lieu.js) */
 
 function loadState() {
-  // 1. Nạp bộ não học máy vĩnh viễn
   const brainSaved = localStorage.getItem(STORAGE_BRAIN_KEY);
   if (brainSaved) {
     try {
@@ -22,6 +21,7 @@ function loadState() {
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
       appState.customKnownItems = parsedBrain.customKnownItems || [];
       appState.noAdkAccounts = parsedBrain.noAdkAccounts || [];
+      appState.reportIncludedAccounts = Array.isArray(parsedBrain.reportIncludedAccounts) ? parsedBrain.reportIncludedAccounts : null;
       appState.equipmentItems = parsedBrain.equipmentItems || [];
       appState.hideEquipment = !!parsedBrain.hideEquipment;
       
@@ -35,7 +35,6 @@ function loadState() {
     }
   }
 
-  // 2. Nạp rương hàng ngày
   const chestsSaved = localStorage.getItem(STORAGE_CHESTS_KEY);
   if (chestsSaved) {
     try {
@@ -101,6 +100,7 @@ function saveBrainState() {
       trainedNumberErrors: appState.trainedNumberErrors,
       customKnownItems: appState.customKnownItems,
       noAdkAccounts: appState.noAdkAccounts,
+      reportIncludedAccounts: appState.reportIncludedAccounts,
       equipmentItems: appState.equipmentItems,
       hideEquipment: appState.hideEquipment
     }));
