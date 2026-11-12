@@ -10,7 +10,8 @@ let appState = {
   chests: [],
   // Bộ não học máy vĩnh viễn:
   learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 }, // Nhớ 4 cạnh căn chỉnh
-  learnedIcons: {},        // { "phật kinh": { img: "data:...", hash: "..." } }
+  // CẤU TRÚC MẢNG ĐA MẪU ẢNH: { "Linh Cầm": [ { img: "...", hash: "..." }, { img: "...", hash: "..." } ], "Rác": [ ... ] }
+  learnedIcons: {},        
   trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
   customKnownItems: [],    // Danh sách tên bạn từng gõ thêm
   ignoredItems: [],
@@ -26,7 +27,7 @@ let appState = {
   selectedSlotIndex: 0
 };
 
-// 1. Tải dữ liệu khi mở web
+// 1. Tải dữ liệu khi mở web & Tự động nâng cấp dữ liệu cũ sang dạng mảng đa mẫu
 function loadState() {
   // A. Nạp bộ não học máy vĩnh viễn trước
   const brainSaved = localStorage.getItem(STORAGE_BRAIN_KEY);
@@ -34,7 +35,20 @@ function loadState() {
     try {
       const parsedBrain = JSON.parse(brainSaved);
       appState.learnedGridCrop = parsedBrain.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 };
-      appState.learnedIcons = parsedBrain.learnedIcons || {};
+      
+      // Tự động chuẩn hóa learnedIcons thành dạng Mảng (Array) để không mất 23 icon cũ
+      const rawIcons = parsedBrain.learnedIcons || {};
+      const normalizedIcons = {};
+      for (const [name, val] of Object.entries(rawIcons)) {
+        if (Array.isArray(val)) {
+          normalizedIcons[name] = val;
+        } else if (val && typeof val === "object" && (val.img || val.hash)) {
+          // Chuyển đổi dữ liệu cũ (1 ảnh) thành mảng chứa ảnh đó
+          normalizedIcons[name] = [val];
+        }
+      }
+      appState.learnedIcons = normalizedIcons;
+
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
       appState.customKnownItems = parsedBrain.customKnownItems || [];
       
@@ -80,7 +94,6 @@ function saveChestsState() {
   } catch (err) {
     console.warn("Cảnh báo: Bộ nhớ rương bị đầy, đang tối ưu lược bớt ảnh cũ...", err);
     try {
-      // Nếu bộ nhớ đầy: bỏ cropImg ở các rương cũ, chỉ giữ tên và số lượng (ảnh vẫn lấy từ learnedIcons ra hiển thị)
       const slimChests = appState.chests.map(c => ({
         ...c,
         slots: (c.slots || []).map(s => ({ 
@@ -110,13 +123,14 @@ function saveChestsState() {
 function saveBrainState() {
   try {
     localStorage.setItem(STORAGE_BRAIN_KEY, JSON.stringify({
-      learnedGridCrop: appState.learnedGridCrop, // Lưu tỷ lệ căn lề 4 cạnh
+      learnedGridCrop: appState.learnedGridCrop,
       learnedIcons: appState.learnedIcons,
       trainedNumberErrors: appState.trainedNumberErrors,
       customKnownItems: appState.customKnownItems
     }));
   } catch (e) {
-    console.error("Lỗi lưu não bộ:", e);
+    console.error("Lỗi lưu não bộ (có thể đầy dung lượng):", e);
+    alert("Bộ nhớ não AI đã rất lớn! Bạn nên bấm 'Xuất Não AI' tải file về máy tính để lưu trữ.");
   }
 }
 
@@ -126,7 +140,7 @@ function saveState() {
   saveChestsState();
 }
 
-// 4. Tính toán tổng hợp toàn kho
+// 4. Tính toán tổng hợp toàn kho (Tương thích mảng đa mẫu ảnh)
 function calculateSummary() {
   const map = new Map();
   appState.chests.forEach(chest => {
@@ -136,12 +150,16 @@ function calculateSummary() {
       const name = slot.name;
       const qty = parseInt(slot.qty) || 0;
       if (!map.has(name)) {
+        // Lấy ảnh đại diện từ rương hoặc mẫu đầu tiên trong mảng đã học
+        const learnedArr = appState.learnedIcons[name];
+        const fallbackIcon = (Array.isArray(learnedArr) && learnedArr.length > 0) ? learnedArr[0].img : null;
+
         map.set(name, {
           name,
           totalQty: 0,
           stacks: 0,
           foundIn: new Set(),
-          icon: slot.cropImg || (appState.learnedIcons[name]?.img) || null,
+          icon: slot.cropImg || fallbackIcon,
           isIgnored: appState.ignoredItems.includes(name)
         });
       }
