@@ -92,9 +92,15 @@ function renderDropdownSuggestions(query = "") {
   dropdown.innerHTML = "";
 
   matched.forEach(item => {
+    const samples = appState.learnedIcons?.[item];
+    const sampleCount = Array.isArray(samples) ? samples.length : (samples ? 1 : 0);
+    const badgeHtml = sampleCount > 0 
+      ? `<span class="text-[10px] text-emerald-400 font-mono">${sampleCount} mẫu</span>` 
+      : `<span class="text-[10px] text-slate-500 font-mono">Có sẵn</span>`;
+
     const itemEl = document.createElement("div");
     itemEl.className = "px-3 py-2 hover:bg-emerald-950/60 hover:text-emerald-300 text-slate-200 cursor-pointer flex items-center justify-between transition text-xs";
-    itemEl.innerHTML = `<span>${item}</span><span class="text-[10px] text-slate-500 font-mono">Đã có</span>`;
+    itemEl.innerHTML = `<span>${item}</span>${badgeHtml}`;
     
     itemEl.onmousedown = (e) => {
       e.preventDefault();
@@ -162,8 +168,13 @@ function renderGameGridChest() {
     cell.title = hasItem ? `${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
+      // Nếu ô bị nén ảnh cropImg, tự động lấy ảnh đầu tiên từ kho đã học để hiển thị
+      const learnedArr = appState.learnedIcons?.[slot.name];
+      const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
+      const displayImg = slot.cropImg || fallbackImg;
+
       cell.innerHTML = `
-        <img src="${slot.cropImg || ''}" class="w-full h-full object-cover">
+        <img src="${displayImg}" class="w-full h-full object-cover">
         <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
       `;
     }
@@ -183,9 +194,16 @@ function renderGameGridChest() {
   const curSlot = (chest && chest.slots) ? chest.slots[appState.selectedSlotIndex] : null;
   updateSidePanelInfo(appState.selectedSlotIndex, curSlot);
   
+  // Đếm tổng số mẫu hình ảnh đã nạp vào bộ não AI
   const statLearned = document.getElementById("statLearnedIcons");
   const statTrained = document.getElementById("statTrainedSamples");
-  if (statLearned) statLearned.textContent = Object.keys(appState.learnedIcons || {}).length;
+  if (statLearned) {
+    let totalSamples = 0;
+    Object.values(appState.learnedIcons || {}).forEach(val => {
+      totalSamples += Array.isArray(val) ? val.length : (val ? 1 : 0);
+    });
+    statLearned.textContent = totalSamples;
+  }
   if (statTrained) statTrained.textContent = (appState.trainedNumberErrors || []).length;
 }
 
@@ -204,8 +222,12 @@ function updateSidePanelInfo(slotIdx, slotData) {
   if (dropdown) dropdown.classList.add("hidden");
 
   if (img && emptyTxt) {
-    if (slotData && slotData.cropImg) {
-      img.src = slotData.cropImg;
+    const learnedArr = slotData?.name ? appState.learnedIcons?.[slotData.name] : null;
+    const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
+    const displayImg = slotData?.cropImg || fallbackImg;
+
+    if (displayImg) {
+      img.src = displayImg;
       img.classList.remove("hidden");
       emptyTxt.classList.add("hidden");
     } else {
