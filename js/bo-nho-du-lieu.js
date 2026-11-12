@@ -16,6 +16,8 @@ let appState = {
   hideEquipment: false,
   ignoredItems: [],
   snapshot: null,
+  snapshotAt: null,
+  weeklyOutSortDesc: true,
   searchQuery: "",
   selectedAccFilter: "ALL",
   showIgnored: false,
