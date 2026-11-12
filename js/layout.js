@@ -117,6 +117,14 @@
               <i data-lucide="shield-off" class="w-3.5 h-3.5 text-sky-400"></i>
               <span id="lblToggleHideEquip">Ẩn Trang Bị: Tắt</span>
             </button>
+            <button id="btnToggleFilterReportAcc" title="Bật/Tắt chỉ tính các tài khoản đã tích chọn trong Cài Đặt" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition">
+              <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span id="lblToggleFilterReportAcc">Lọc Acc: Tắt</span>
+            </button>
+            <button id="btnToggleHideEquip" title="Bật/Tắt ẩn các món được đánh dấu là Trang Bị" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition">
+              <i data-lucide="shield-off" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span id="lblToggleHideEquip">Ẩn Trang Bị: Tắt</span>
+            </button>
             <button id="btnToggleShowIgnored" title="Xem hoặc ẩn các vật phẩm bạn đã bấm bỏ qua khỏi báo cáo" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-700 transition">
               <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
               <span id="lblToggleShowIgnored">Đồ Bỏ Qua (0)</span>
