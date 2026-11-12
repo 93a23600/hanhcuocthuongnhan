@@ -19,6 +19,20 @@ function renderSummaryTable() {
     filterSelect.value = appState.selectedAccFilter || "ALL";
   }
 
+  // Cập nhật trạng thái nút Lọc Acc theo danh sách trong Cài Đặt
+  const btnFilterReportAcc = document.getElementById("btnToggleFilterReportAcc");
+  const lblFilterReportAcc = document.getElementById("lblToggleFilterReportAcc");
+  if (btnFilterReportAcc && lblFilterReportAcc) {
+    if (appState.filterReportAccs) {
+      btnFilterReportAcc.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-950/70 text-emerald-300 border border-emerald-500/60 transition";
+      lblFilterReportAcc.textContent = "Lọc Acc: Bật";
+    } else {
+      btnFilterReportAcc.className = "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 border border-slate-700 transition";
+      lblFilterReportAcc.textContent = "Lọc Acc: Tắt";
+    }
+  }
+
+  // Cập nhật trạng thái nút Ẩn Trang Bị
   const btnHideEquip = document.getElementById("btnToggleHideEquip");
   const lblHideEquip = document.getElementById("lblToggleHideEquip");
   if (btnHideEquip && lblHideEquip) {
@@ -31,6 +45,7 @@ function renderSummaryTable() {
     }
   }
 
+  // Cập nhật trạng thái nút Đồ Bỏ Qua
   const btnShowIgnored = document.getElementById("btnToggleShowIgnored");
   const lblShowIgnored = document.getElementById("lblToggleShowIgnored");
   if (btnShowIgnored && lblShowIgnored) {
