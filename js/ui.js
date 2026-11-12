@@ -154,7 +154,7 @@ function renderDropdownSuggestions(query = "") {
   }
 }
 
-/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 35 Ô (5x7) + ĐÁNH MÀU & CẦU NỐI LIÊN KẾT CÙNG TÊN */
+/* RENDER TAB 1: RƯƠNG GAME MÔ PHỎNG 35 Ô (5x7) + ICON LINK GIỮA 2 Ô CÙNG TÊN */
 function renderGameGridChest() {
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc && appState.accounts && appState.accounts.length > 0) {
@@ -173,7 +173,7 @@ function renderGameGridChest() {
 
   if (!container) return;
 
-  // Cấp bảng màu riêng biệt cho từng tên vật phẩm có trong rương này (độc lập mỗi rương)
+  // Cấp bảng màu riêng biệt cho từng tên vật phẩm có trong rương này
   const chestColorMap = new Map();
   let colorIdx = 0;
   const slots = (chest && chest.slots) ? chest.slots : [];
@@ -200,51 +200,46 @@ function renderGameGridChest() {
 
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    cell.className = `game-slot-cell relative overflow-hidden ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
+    // Bỏ overflow-hidden ở cell để icon link có thể nằm nổi đè lên khoảng hở giữa 2 ô
+    cell.className = `game-slot-cell relative ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
     cell.title = hasItem ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
       const normName = slot.name.trim().toLowerCase();
       const groupColor = chestColorMap.get(normName) || "#10b981";
 
-      // Kiểm tra ô liền trước (i - 1) và liền sau (i + 1) xem có cùng tên không
-      const prevName = (i > 0 && slots[i - 1]?.name) ? slots[i - 1].name.trim().toLowerCase() : null;
-      const nextName = (i < 34 && slots[i + 1]?.name) ? slots[i + 1].name.trim().toLowerCase() : null;
-
-      const linkedLeft = (prevName === normName);
-      const linkedRight = (nextName === normName);
-      const isPartOfChain = linkedLeft || linkedRight;
+      // Kiểm tra xem có phải cột cuối bên phải của hàng không (cột 5, 10, 15, 20, 25, 30, 35)
+      const isEndOfRow = ((i + 1) % 5 === 0);
+      const nextName = (!isEndOfRow && i < 34 && slots[i + 1]?.name) ? slots[i + 1].name.trim().toLowerCase() : null;
+      const hasLinkRight = (nextName === normName);
 
       // Viền ô mang màu đặc trưng của món đồ
       if (!isSelected) {
         cell.style.borderColor = groupColor;
-        cell.style.boxShadow = `inset 0 0 8px ${groupColor}33`;
       }
 
       const learnedArr = appState.learnedIcons?.[slot.name];
       const fallbackImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[0].img : (learnedArr?.img || "");
       const displayImg = slot.cropImg || fallbackImg;
 
-      // Vẽ thanh liên kết & điểm nút ở mép trên cùng của ô
-      let linkOverlayHtml = "";
-      if (isPartOfChain) {
-        linkOverlayHtml = `
-          <div class="absolute top-0 left-0 right-0 h-1.5 pointer-events-none flex items-center z-10">
-            ${linkedLeft ? `<div class="h-[3px] flex-1" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>` : `<div class="flex-1"></div>`}
-            <div class="w-2 h-2 rounded-full shrink-0 border border-slate-950" style="background:${groupColor}; box-shadow: 0 0 6px ${groupColor};"></div>
-            ${linkedRight ? `<div class="h-[3px] flex-1" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>` : `<div class="flex-1"></div>`}
+      // 1. Chấm tròn màu gọn gàng ở góc trên trái
+      const dotHtml = `<div class="absolute top-1 left-1 w-2 h-2 rounded-full pointer-events-none border border-slate-950 z-10" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>`;
+
+      // 2. Icon mắt xích (Link) nằm chính giữa khoảng trống bên phải nối sang ô kế tiếp
+      let linkIconHtml = "";
+      if (hasLinkRight) {
+        linkIconHtml = `
+          <div class="absolute top-1/2 -right-[11px] -translate-y-1/2 w-4 h-4 rounded-full bg-[#0c131a] border flex items-center justify-center z-20 pointer-events-none shadow-md"
+               style="border-color: ${groupColor}; color: ${groupColor};">
+            <i data-lucide="link-2" class="w-2.5 h-2.5"></i>
           </div>
-        `;
-      } else {
-        // Ô đứng lẻ một mình (không nối với ô nào) -> hiện chấm màu đơn ở góc trên trái
-        linkOverlayHtml = `
-          <div class="absolute top-1 left-1 w-2 h-2 rounded-full pointer-events-none border border-slate-950 z-10" style="background:${groupColor};" title="Ô đơn lẻ (không nối cụm)"></div>
         `;
       }
 
       cell.innerHTML = `
-        ${linkOverlayHtml}
-        <img src="${displayImg}" class="w-full h-full object-cover">
+        ${dotHtml}
+        ${linkIconHtml}
+        <img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit]">
         <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
       `;
     }
@@ -275,6 +270,9 @@ function renderGameGridChest() {
     statLearned.textContent = totalSamples;
   }
   if (statTrained) statTrained.textContent = (appState.trainedNumberErrors || []).length;
+
+  // Render lại icon Lucide cho các mắt xích mới tạo
+  if (window.lucide) lucide.createIcons();
 }
 
 /* CẬP NHẬT DỮ LIỆU VÀO PANEL BÊN PHẢI */
