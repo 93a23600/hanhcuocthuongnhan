@@ -10,10 +10,13 @@ let appState = {
   chests: [],
   // Bộ não học máy vĩnh viễn:
   learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 }, // Nhớ 4 cạnh căn chỉnh
-  // CẤU TRÚC MẢNG ĐA MẪU ẢNH: { "Linh Cầm": [ { img: "...", hash: "..." }, { img: "...", hash: "..." } ], "Rác": [ ... ] }
+  // CẤU TRÚC MẢNG ĐA MẪU ẢNH: { "Linh Cầm": [ { img: "...", hash: "..." }, { img: "...", hash: "..." } ] }
   learnedIcons: {},        
   trainedNumberErrors: [], // [{ wrongQty, correctQty, itemName }]
   customKnownItems: [],    // Danh sách tên bạn từng gõ thêm
+  noAdkAccounts: [],       // Danh sách tên tài khoản bỏ qua Âm Dương Kính (tự ép sang Thiết Bát Quái)
+  equipmentItems: [],      // Danh sách tên vật phẩm được đánh dấu là Trang Bị
+  hideEquipment: false,    // Trạng thái bật/tắt ẩn Trang Bị trong Tổng Hợp Toàn Kho
   ignoredItems: [],
   snapshot: null,
   searchQuery: "",
@@ -36,14 +39,13 @@ function loadState() {
       const parsedBrain = JSON.parse(brainSaved);
       appState.learnedGridCrop = parsedBrain.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 };
       
-      // Tự động chuẩn hóa learnedIcons thành dạng Mảng (Array) để không mất 23 icon cũ
+      // Tự động chuẩn hóa learnedIcons thành dạng Mảng (Array) để không mất icon cũ
       const rawIcons = parsedBrain.learnedIcons || {};
       const normalizedIcons = {};
       for (const [name, val] of Object.entries(rawIcons)) {
         if (Array.isArray(val)) {
           normalizedIcons[name] = val;
         } else if (val && typeof val === "object" && (val.img || val.hash)) {
-          // Chuyển đổi dữ liệu cũ (1 ảnh) thành mảng chứa ảnh đó
           normalizedIcons[name] = [val];
         }
       }
@@ -51,6 +53,9 @@ function loadState() {
 
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
       appState.customKnownItems = parsedBrain.customKnownItems || [];
+      appState.noAdkAccounts = parsedBrain.noAdkAccounts || [];
+      appState.equipmentItems = parsedBrain.equipmentItems || [];
+      appState.hideEquipment = !!parsedBrain.hideEquipment;
       
       // Đồng bộ tên đã học vào danh mục chuẩn KNOWN_ITEMS
       if (typeof KNOWN_ITEMS !== "undefined" && Array.isArray(KNOWN_ITEMS)) {
@@ -126,7 +131,10 @@ function saveBrainState() {
       learnedGridCrop: appState.learnedGridCrop,
       learnedIcons: appState.learnedIcons,
       trainedNumberErrors: appState.trainedNumberErrors,
-      customKnownItems: appState.customKnownItems
+      customKnownItems: appState.customKnownItems,
+      noAdkAccounts: appState.noAdkAccounts,
+      equipmentItems: appState.equipmentItems,
+      hideEquipment: appState.hideEquipment
     }));
   } catch (e) {
     console.error("Lỗi lưu não bộ (có thể đầy dung lượng):", e);
@@ -150,16 +158,22 @@ function calculateSummary() {
       const name = slot.name;
       const qty = parseInt(slot.qty) || 0;
       if (!map.has(name)) {
+        // Ưu tiên lấy mẫu ảnh MỚI NHẤT (cuối mảng learnedIcons) làm icon đại diện trong Tổng Hợp Toàn Kho
         const learnedArr = appState.learnedIcons[name];
-        const fallbackIcon = (Array.isArray(learnedArr) && learnedArr.length > 0) ? learnedArr[0].img : null;
+        const latestLearnedImg = (Array.isArray(learnedArr) && learnedArr.length > 0) 
+          ? learnedArr[learnedArr.length - 1].img 
+          : (learnedArr?.img || null);
+
+        const isEquip = (appState.equipmentItems || []).some(e => e.toLowerCase() === name.toLowerCase());
 
         map.set(name, {
           name,
           totalQty: 0,
           stacks: 0,
           foundIn: new Set(),
-          icon: slot.cropImg || fallbackIcon,
-          isIgnored: appState.ignoredItems.includes(name)
+          icon: latestLearnedImg || slot.cropImg || null,
+          isIgnored: appState.ignoredItems.includes(name),
+          isEquipment: isEquip
         });
       }
       const item = map.get(name);
@@ -179,6 +193,9 @@ function calculateSummary() {
   }
   if (!appState.showIgnored) {
     res = res.filter(i => !i.isIgnored);
+  }
+  if (appState.hideEquipment) {
+    res = res.filter(i => !i.isEquipment);
   }
 
   // Sắp xếp theo tên hoặc theo số lượng (tăng / giảm dần)
