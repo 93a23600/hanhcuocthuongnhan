@@ -141,7 +141,7 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // Nút AI Tự Căn Khung (Chỉ đặt khung, không tự bấm tiếp tục)
+  // Nút AI Tự Căn Khung
   document.addEventListener("click", (e) => {
     const btnAi = e.target.closest("#btnAiAutoCalibrate");
     if (btnAi && typeof window.runAiAutoCalibrateGrid === "function") {
@@ -158,7 +158,7 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // Xác nhận khung -> Cắt 35 ô riêng biệt & mở Popup chọn Acc/Rương
+  // Xác nhận khung -> Train độ lệch (nếu có), cắt 35 ô riêng biệt sắc nét & mở Popup chọn Acc/Rương
   const btnConfirmCalib = document.getElementById("btnConfirmCalibrate");
   if (btnConfirmCalib) {
     btnConfirmCalib.onclick = () => {
@@ -169,27 +169,43 @@ function initUploadAndCalibrateEvents() {
         appState.learnedGridCrop = Object.assign({}, currentCropRatios);
         saveBrainState();
 
-        pendingCrops = sliceGridWithRatios(pendingRawImg, currentCropRatios);
+        // 1. Train AI nếu người dùng vừa sửa lại khung bị lệch
+        if (typeof window.trainAiGridCorrection === "function") {
+          window.trainAiGridCorrection(pendingRawImg, currentCropRatios);
+        }
 
-        const cvs = document.createElement("canvas");
-        const ctx = cvs.getContext("2d");
-        const startX = (currentCropRatios.left / 100) * pendingRawImg.naturalWidth;
-        const startY = (currentCropRatios.top / 100) * pendingRawImg.naturalHeight;
-        const cropW = pendingRawImg.naturalWidth - startX - ((currentCropRatios.right / 100) * pendingRawImg.naturalWidth);
-        const cropH = pendingRawImg.naturalHeight - startY - ((currentCropRatios.bottom / 100) * pendingRawImg.naturalHeight);
+        // 2. Tạo gói 35 ô sắc nét riêng biệt + bản ảnh lưới đã khóa chuẩn truyền cho AI sau
+        if (typeof window.buildVerifiedGridPayload === "function") {
+          const verifiedPayload = window.buildVerifiedGridPayload(pendingRawImg, currentCropRatios);
+          pendingCrops = verifiedPayload.crops35;
+          pendingImage = {
+            base64: verifiedPayload.annotatedBase64,
+            dataUrl: verifiedPayload.cleanDataUrl,
+            isVerifiedGrid: true
+          };
+        } else {
+          pendingCrops = sliceGridWithRatios(pendingRawImg, currentCropRatios);
 
-        cvs.width = Math.max(1, cropW);
-        cvs.height = Math.max(1, cropH);
-        ctx.drawImage(pendingRawImg, startX, startY, cropW, cropH, 0, 0, cvs.width, cvs.height);
+          const cvs = document.createElement("canvas");
+          const ctx = cvs.getContext("2d");
+          const startX = (currentCropRatios.left / 100) * pendingRawImg.naturalWidth;
+          const startY = (currentCropRatios.top / 100) * pendingRawImg.naturalHeight;
+          const cropW = pendingRawImg.naturalWidth - startX - ((currentCropRatios.right / 100) * pendingRawImg.naturalWidth);
+          const cropH = pendingRawImg.naturalHeight - startY - ((currentCropRatios.bottom / 100) * pendingRawImg.naturalHeight);
 
-        const croppedDataUrl = cvs.toDataURL("image/png");
-        pendingImage = {
-          base64: croppedDataUrl.split(",")[1],
-          dataUrl: croppedDataUrl
-        };
+          cvs.width = Math.max(1, cropW);
+          cvs.height = Math.max(1, cropH);
+          ctx.drawImage(pendingRawImg, startX, startY, cropW, cropH, 0, 0, cvs.width, cvs.height);
+
+          const croppedDataUrl = cvs.toDataURL("image/png");
+          pendingImage = {
+            base64: croppedDataUrl.split(",")[1],
+            dataUrl: croppedDataUrl
+          };
+        }
 
         const previewImg = document.getElementById("uploadPreviewImg");
-        if (previewImg) previewImg.src = croppedDataUrl;
+        if (previewImg && pendingImage) previewImg.src = pendingImage.dataUrl;
 
         openUploadModal();
         const accInp = document.getElementById("inputAccountName");
@@ -197,7 +213,7 @@ function initUploadAndCalibrateEvents() {
         if (accInp) {
           accInp.oninput = () => window.renderUploadChestChoiceButtons(accInp.value);
         }
-        showToast("Đã ghi nhớ tỷ lệ căn viền vào Bộ Não AI!", "success");
+        showToast("Đã khóa khung 35 ô chuẩn & truyền dữ liệu sang AI!", "success");
       }
     };
   }
