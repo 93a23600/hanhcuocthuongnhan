@@ -7,7 +7,7 @@ window.runAiAutoCalibrateGrid = async function() {
   }
 
   if (!appState || !appState.apiKey) {
-    showToast("Vui lòng cài đặt Gemini API Key trước khi dùng AI căn khung!", "error");
+    showToast("Vui lòng nhập Gemini API Key trước khi dùng AI căn khung!", "error");
     return;
   }
 
@@ -16,7 +16,7 @@ window.runAiAutoCalibrateGrid = async function() {
   if (btnAi) {
     btnAi.disabled = true;
     btnAi.classList.add("opacity-60", "cursor-wait");
-    btnAi.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>AI đang đo khung...</span>`;
+    btnAi.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>AI đang soi khung...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
@@ -32,19 +32,18 @@ window.runAiAutoCalibrateGrid = async function() {
     const modelName = appState.geminiModel || "gemini-2.5-flash";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
 
-    const prompt = `Bạn là chuyên gia thị giác máy tính phân tích giao diện rương chứa đồ trong game kiếm hiệp (lưới 5 cột ngang × 7 hàng dọc = 35 ô vuông vật phẩm).
-Hãy xác định chính xác vùng chữ nhật bao trọn 35 ô chứa đồ bên trong (KHÔNG bao gồm thanh tiêu đề "Rương chứa đồ", nút đóng X ở trên, thanh chuyển trang < 1 > ở dưới, hay viền cửa sổ bên ngoài).
+    // Dùng chuẩn bounding box [ymin, xmin, ymax, xmax] thang 0..1000 để AI định vị chính xác từng mép ô
+    const prompt = `Detect the exact bounding box of the 5x7 inventory item slots grid (35 square item slots total: 5 columns wide by 7 rows tall) inside this game screenshot.
 
-Hãy trả về tỷ lệ phần trăm (%) cần cắt bỏ từ 4 mép của bức ảnh gốc để khớp khít đường viền ngoài cùng của lưới 5×7 ô:
-- "top": % chiều cao cắt từ mép trên ảnh xuống tới mép trên của hàng ô đầu tiên (hàng 1).
-- "bottom": % chiều cao cắt từ mép dưới ảnh lên tới mép dưới của hàng ô cuối cùng (hàng 7).
-- "left": % chiều rộng cắt từ mép trái ảnh vào tới mép trái của cột ô đầu tiên (cột 1).
-- "right": % chiều rộng cắt từ mép phải ảnh vào tới mép phải của cột ô cuối cùng (cột 5).
+CRITICAL VISUAL LANDMARKS TO INCLUDE & EXCLUDE:
+- INCLUDE tightly all 35 square item cells from the top-left corner of cell (row 1, col 1) to the bottom-right corner of cell (row 7, col 5).
+- INCLUDE the bottom-right quantity text (like x999, x400) inside row 7 (the bottom row of items). Do NOT cut off the numbers at the bottom of row 7!
+- EXCLUDE the top title bar ("Rương chứa đồ" / "ng chứa đồ") and the close button (X) above row 1.
+- EXCLUDE the page navigation bar (< 1 >) below row 7.
+- EXCLUDE the thin left/right window border strips outside the 5 columns.
 
-Quy tắc bắt buộc:
-- Giá trị nằm trong khoảng 0 đến 45, làm tròn đến 0.5 (ví dụ: 1.5, 4.0, 12.5).
-- Chỉ trả về duy nhất một đối tượng JSON hợp lệ, không giải thích thêm:
-{"top": 0, "bottom": 0, "left": 0, "right": 0}`;
+Return ONLY a JSON object with "box_2d" as [ymin, xmin, ymax, xmax] normalized to 0..1000:
+{"box_2d": [ymin, xmin, ymax, xmax]}`;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -57,7 +56,7 @@ Quy tắc bắt buộc:
           ]
         }],
         generationConfig: {
-          temperature: 0.1,
+          temperature: 0.0,
           responseMimeType: "application/json"
         }
       })
@@ -73,18 +72,27 @@ Quy tắc bắt buộc:
     const cleanedJson = rawText.replace(/```json|```/gi, "").trim();
     const parsed = JSON.parse(cleanedJson);
 
-    const clampStepHalf = (val) => {
-      const num = parseFloat(val);
-      if (isNaN(num)) return 0;
-      const clamped = Math.max(0, Math.min(45, num));
+    const box = Array.isArray(parsed) ? parsed[0]?.box_2d : parsed?.box_2d;
+    if (!Array.isArray(box) || box.length !== 4) {
+      throw new Error("AI không trả về tọa độ box_2d hợp lệ.");
+    }
+
+    const [ymin, xmin, ymax, xmax] = box.map(Number);
+    if ([ymin, xmin, ymax, xmax].some(v => isNaN(v)) || ymax <= ymin || xmax <= xmin) {
+      throw new Error("Tọa độ khung AI trả về không hợp lệ.");
+    }
+
+    // Quy đổi tọa độ [0..1000] sang % cắt 4 lề (làm tròn 0.5%)
+    const toHalfPercent = (val) => {
+      const clamped = Math.max(0, Math.min(45, val));
       return Math.round(clamped * 2) / 2;
     };
 
     const newRatios = {
-      top: clampStepHalf(parsed.top),
-      bottom: clampStepHalf(parsed.bottom),
-      left: clampStepHalf(parsed.left),
-      right: clampStepHalf(parsed.right)
+      top: toHalfPercent(ymin / 10),
+      left: toHalfPercent(xmin / 10),
+      bottom: toHalfPercent((1000 - ymax) / 10),
+      right: toHalfPercent((1000 - xmax) / 10)
     };
 
     if (typeof currentCropRatios !== "undefined") {
@@ -94,7 +102,7 @@ Quy tắc bắt buộc:
       currentCropRatios.right = newRatios.right;
     }
 
-    // Đồng bộ lại 4 thanh trượt (mở rộng max nếu AI đo > 30%)
+    // Đồng bộ lại 4 thanh trượt (tự mở rộng max nếu AI đo > 30%)
     const sideMap = { Top: newRatios.top, Bottom: newRatios.bottom, Left: newRatios.left, Right: newRatios.right };
     Object.entries(sideMap).forEach(([side, val]) => {
       const slider = document.getElementById(`rangeCrop${side}`);
