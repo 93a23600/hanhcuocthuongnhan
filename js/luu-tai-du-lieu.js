@@ -1,5 +1,24 @@
 /* MODULE: NẠP & LƯU TRỮ LOCALSTORAGE (js/luu-tai-du-lieu.js) */
 
+function compressSlotCropDataUrl(dataUrl, size = 56, quality = 0.72) {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image")) {
+      return resolve(dataUrl || null);
+    }
+    const img = new Image();
+    img.onload = () => {
+      const cvs = document.createElement("canvas");
+      cvs.width = size;
+      cvs.height = size;
+      const ctx = cvs.getContext("2d");
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(cvs.toDataURL("image/webp", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function loadState() {
   const brainSaved = localStorage.getItem(STORAGE_BRAIN_KEY);
   if (brainSaved) {
@@ -55,36 +74,50 @@ function loadState() {
   }
 }
 
-function saveChestsState() {
+async function saveChestsState() {
+  const payload = {
+    accounts: appState.accounts,
+    chests: appState.chests,
+    ignoredItems: appState.ignoredItems,
+    snapshot: appState.snapshot,
+    snapshotAt: appState.snapshotAt
+  };
+
   try {
-    localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
-      accounts: appState.accounts,
-      chests: appState.chests,
-      ignoredItems: appState.ignoredItems,
-      snapshot: appState.snapshot,
-      snapshotAt: appState.snapshotAt
-    }));
+    localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(payload));
   } catch (err) {
-    console.warn("Cảnh báo: Bộ nhớ rương bị đầy, đang tối ưu lược bớt ảnh cũ...", err);
+    console.warn("Bộ nhớ gần đầy, đang nén nhẹ từng ảnh cắt riêng biệt để giữ nguyên toàn bộ ảnh thực tế của từng ô...", err);
     try {
-      const slimChests = appState.chests.map(c => ({
-        ...c,
-        slots: (c.slots || []).map(s => ({ 
-          name: s.name, 
-          qty: s.qty, 
-          cropImg: null, 
-          aiOriginalQty: s.aiOriginalQty 
+      // Nén nhẹ từng cropImg riêng biệt về WebP 56x56 thay vì xóa cropImg = null
+      const compressedChests = await Promise.all(
+        (appState.chests || []).map(async (c) => ({
+          ...c,
+          slots: await Promise.all(
+            (c.slots || []).map(async (s) => {
+              if (!s) return null;
+              const smallCrop = s.cropImg ? await compressSlotCropDataUrl(s.cropImg, 56, 0.72) : null;
+              if (smallCrop) s.cropImg = smallCrop;
+              return {
+                name: s.name,
+                qty: s.qty,
+                hasStackNum: s.hasStackNum,
+                cropImg: smallCrop,
+                aiOriginalQty: s.aiOriginalQty
+              };
+            })
+          )
         }))
-      }));
+      );
+
       localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
         accounts: appState.accounts,
-        chests: slimChests,
+        chests: compressedChests,
         ignoredItems: appState.ignoredItems,
         snapshot: appState.snapshot,
         snapshotAt: appState.snapshotAt
       }));
     } catch (e) {
-      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' để sao lưu.");
+      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' hoặc xóa bớt rương cũ để giải phóng dung lượng.");
     }
   }
 
