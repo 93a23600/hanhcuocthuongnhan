@@ -1,6 +1,6 @@
 /* MODULE: NẠP & LƯU TRỮ LOCALSTORAGE (js/luu-tai-du-lieu.js) */
 
-function compressSlotCropDataUrl(dataUrl, size = 56, quality = 0.72) {
+function compressSlotCropDataUrl(dataUrl, size = 52, quality = 0.72) {
   return new Promise((resolve) => {
     if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image")) {
       return resolve(dataUrl || null);
@@ -75,49 +75,71 @@ function loadState() {
 }
 
 async function saveChestsState() {
-  const payload = {
+  // Khóa cứng ảnh từng ô: đối chiếu với bản đã lưu trước đó để chống mất cropImg ngoài ý muốn
+  let prevChestsMap = new Map();
+  try {
+    const prevRaw = localStorage.getItem(STORAGE_CHESTS_KEY);
+    if (prevRaw) {
+      const prevParsed = JSON.parse(prevRaw);
+      (prevParsed.chests || []).forEach(c => {
+        prevChestsMap.set(`${c.account}__${c.title}`, c.slots || []);
+      });
+    }
+  } catch (e) {}
+
+  (appState.chests || []).forEach(c => {
+    const prevSlots = prevChestsMap.get(`${c.account}__${c.title}`) || [];
+    if (!Array.isArray(c.slots)) return;
+    c.slots.forEach((s, idx) => {
+      if (!s) return;
+      // Nếu ô chưa có ảnh mới nạp (isNewUpload !== true) mà bị mất cropImg -> phục hồi lại ảnh cũ đang khóa
+      if (!s.cropImg && !c._isNewImageUpload && prevSlots[idx]?.cropImg) {
+        s.cropImg = prevSlots[idx].cropImg;
+      }
+    });
+    delete c._isNewImageUpload;
+  });
+
+  const buildPayload = (chestsData) => ({
     accounts: appState.accounts,
-    chests: appState.chests,
+    chests: chestsData,
     ignoredItems: appState.ignoredItems,
     snapshot: appState.snapshot,
     snapshotAt: appState.snapshotAt
-  };
+  });
 
   try {
-    localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(payload));
+    localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(buildPayload(appState.chests)));
   } catch (err) {
-    console.warn("Bộ nhớ gần đầy, đang nén nhẹ từng ảnh cắt riêng biệt để giữ nguyên toàn bộ ảnh thực tế của từng ô...", err);
+    console.warn("Đang tối ưu dung lượng WebP cho từng ảnh ô để khóa cứng toàn bộ ảnh gốc...", err);
     try {
-      // Nén nhẹ từng cropImg riêng biệt về WebP 56x56 thay vì xóa cropImg = null
-      const compressedChests = await Promise.all(
-        (appState.chests || []).map(async (c) => ({
-          ...c,
-          slots: await Promise.all(
-            (c.slots || []).map(async (s) => {
-              if (!s) return null;
-              const smallCrop = s.cropImg ? await compressSlotCropDataUrl(s.cropImg, 56, 0.72) : null;
-              if (smallCrop) s.cropImg = smallCrop;
-              return {
-                name: s.name,
-                qty: s.qty,
-                hasStackNum: s.hasStackNum,
-                cropImg: smallCrop,
-                aiOriginalQty: s.aiOriginalQty
-              };
-            })
-          )
-        }))
-      );
-
-      localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify({
-        accounts: appState.accounts,
-        chests: compressedChests,
-        ignoredItems: appState.ignoredItems,
-        snapshot: appState.snapshot,
-        snapshotAt: appState.snapshotAt
-      }));
+      // Nén nhẹ từng cropImg riêng biệt (52x52 WebP), tuyệt đối không xóa cropImg
+      for (const c of (appState.chests || [])) {
+        if (!Array.isArray(c.slots)) continue;
+        for (let i = 0; i < c.slots.length; i++) {
+          const s = c.slots[i];
+          if (s && s.cropImg) {
+            s.cropImg = await compressSlotCropDataUrl(s.cropImg, 52, 0.72);
+          }
+        }
+      }
+      localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(buildPayload(appState.chests)));
     } catch (e) {
-      alert("Bộ nhớ trình duyệt đã đầy! Hãy bấm 'Xuất Não AI' hoặc xóa bớt rương cũ để giải phóng dung lượng.");
+      try {
+        // Mức nén sâu hơn (44x44 WebP) vẫn giữ nguyên 100% ảnh gốc của từng ô
+        for (const c of (appState.chests || [])) {
+          if (!Array.isArray(c.slots)) continue;
+          for (let i = 0; i < c.slots.length; i++) {
+            const s = c.slots[i];
+            if (s && s.cropImg) {
+              s.cropImg = await compressSlotCropDataUrl(s.cropImg, 44, 0.62);
+            }
+          }
+        }
+        localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(buildPayload(appState.chests)));
+      } catch (e2) {
+        alert("Bộ nhớ trình duyệt đã chạm giới hạn 5MB! Hãy bấm 'Xuất Não AI' hoặc xóa bớt tài khoản cũ để giải phóng dung lượng.");
+      }
     }
   }
 
