@@ -85,11 +85,17 @@
           </div>
         </div>
 
-        <div class="pt-3 mt-2 border-t border-slate-800 flex justify-between items-center gap-2">
-          <button id="btnResetCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg">Đặt lại viền 0%</button>
+        <div class="pt-3 mt-2 border-t border-slate-800 flex flex-wrap justify-between items-center gap-2">
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btnResetCalibrate" class="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">Đặt lại viền 0%</button>
+            <button type="button" id="btnAiAutoCalibrate" class="px-3 py-1.5 text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-lg font-bold flex items-center gap-1.5 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>AI Căn Khung</span>
+            </button>
+          </div>
           <div class="flex gap-2">
-            <button id="btnCancelCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-lg">Hủy</button>
-            <button id="btnConfirmCalibrate" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950">
+            <button type="button" id="btnCancelCalibrate" class="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-lg">Hủy</button>
+            <button type="button" id="btnConfirmCalibrate" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950">
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
               <span>Khung Đã Chuẩn &rarr; Tiếp Tục</span>
             </button>
