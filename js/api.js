@@ -9,6 +9,10 @@ function setScanProgress(percent, statusText) {
   if (statusEl && statusText) statusEl.textContent = statusText;
   if (percentEl) percentEl.textContent = `${p}%`;
   if (barFill) barFill.style.width = `${p}%`;
+
+  if (typeof syncCollapsedProgressBar === "function") {
+    syncCollapsedProgressBar();
+  }
 }
 
 async function executeUpload(accountName, chestTitle) {
@@ -38,7 +42,8 @@ async function executeUpload(accountName, chestTitle) {
       await new Promise(r => setTimeout(r, 800));
       aiSlots = Array.from({ length: 35 }, (_, i) => ({
         name: i < 15 ? (KNOWN_ITEMS[i] || "Vật phẩm") : null,
-        qty: i < 15 ? 999 : 0
+        qty: i < 15 ? 999 : 0,
+        hasStackNum: i < 15
       }));
     }
 
@@ -57,8 +62,9 @@ async function executeUpload(accountName, chestTitle) {
       const crop = pendingCrops[i] || null;
       let assignedName = aiSlots[i]?.name || null;
       let assignedQty = aiSlots[i]?.qty || 0;
+      const hasStackNum = aiSlots[i]?.hasStackNum !== undefined ? !!aiSlots[i].hasStackNum : (assignedQty > 1);
 
-      // So khớp với kho dữ liệu đa mẫu ảnh đã train (gọi từ js/bam-anh.js)
+      // Chỉ nhận diện theo mẫu đã học khi độ giống cực cao (dist <= 3) để không ép nhầm đồ lạ
       if (crop && appState.learnedIcons) {
         const cropHash = await computeImageHash(crop);
         let bestMatchName = null;
@@ -69,7 +75,7 @@ async function executeUpload(accountName, chestTitle) {
           for (const sample of samples) {
             if (!sample || !sample.hash) continue;
             const dist = getHammingDistance(cropHash, sample.hash);
-            if (dist < lowestDist && dist <= 7) {
+            if (dist < lowestDist && dist <= 3) {
               lowestDist = dist;
               bestMatchName = learnedName;
             }
@@ -89,6 +95,7 @@ async function executeUpload(accountName, chestTitle) {
       finalSlots.push({
         name: assignedName,
         qty: assignedName ? assignedQty : 0,
+        hasStackNum: assignedName ? hasStackNum : false,
         cropImg: crop,
         aiOriginalQty: assignedQty
       });
