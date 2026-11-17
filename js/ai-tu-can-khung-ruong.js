@@ -6,9 +6,8 @@ window.lastAiSuggestedRatios = null;
 
 /**
  * Nạp / Lưu bộ nhớ train cắt khung vĩnh viễn
- * Lưu lại:
  * - profiles: { "WxH": { top, bottom, left, right, count } } (khung chuẩn đã được người dùng xác nhận theo từng cỡ ảnh)
- * - corrections: [{ imgRatio, aiGuessed, userFixed, delta }] (các lần AI căn lệch và bị người dùng kéo sửa lại)
+ * - corrections: [{ sizeKey, aspect, aiGuessed, userFixed, delta }] (các lần AI căn lệch và bị người dùng kéo sửa lại)
  */
 function loadCropTrainBrain() {
   try {
@@ -215,53 +214,50 @@ window.trainAiGridCorrection = function(rawImg, finalRatios) {
 };
 
 /**
- * Tạo gói dữ liệu khung chuẩn 100% từ ảnh zin + tỷ lệ đã chốt để truyền sang AI bước tiếp theo
+ * Tạo gói dữ liệu khung chuẩn 100% từ ảnh zin + tỷ lệ đã chốt:
+ * 1. Cắt 35 ô giữ nguyên 100% kích thước pixel thật 1:1 của ảnh gốc (không phóng to/thu nhỏ gây mờ hay vỡ hạt)
+ * 2. Vẽ bản ảnh lưới 2x sắc nét có kẻ khung đỏ + gắn nhãn số #1 -> #35 ở góc trên trái mỗi ô
  */
 window.buildVerifiedGridPayload = function(rawImg, ratios) {
   const totalW = rawImg.naturalWidth;
   const totalH = rawImg.naturalHeight;
 
-  const startX = (ratios.left / 100) * totalW;
-  const startY = (ratios.top / 100) * totalH;
-  const activeW = Math.max(5, totalW - startX - ((ratios.right / 100) * totalW));
-  const activeH = Math.max(7, totalH - startY - ((ratios.bottom / 100) * totalH));
+  const startX = Math.round((ratios.left / 100) * totalW);
+  const startY = Math.round((ratios.top / 100) * totalH);
+  const activeW = Math.max(5, Math.round(totalW - startX - ((ratios.right / 100) * totalW)));
+  const activeH = Math.max(7, Math.round(totalH - startY - ((ratios.bottom / 100) * totalH)));
 
   const stepX = activeW / 5;
   const stepY = activeH / 7;
 
-  // Cắt 35 ô kích thước thật sắc nét nguyên bản (không mờ)
-  const slotW = Math.max(64, Math.round(stepX));
-  const slotH = Math.max(64, Math.round(stepY));
-  const cellCvs = document.createElement("canvas");
-  cellCvs.width = slotW;
-  cellCvs.height = slotH;
-  const cellCtx = cellCvs.getContext("2d");
-  cellCtx.imageSmoothingEnabled = false;
-
+  // 1. Cắt 35 ô giữ nguyên độ phân giải gốc 1:1 (không co giãn làm mờ ảnh)
   const crops = [];
+  const cellCvs = document.createElement("canvas");
+  const cellCtx = cellCvs.getContext("2d");
+
   for (let r = 0; r < 7; r++) {
     for (let c = 0; c < 5; c++) {
-      cellCtx.clearRect(0, 0, slotW, slotH);
-      cellCtx.drawImage(
-        rawImg,
-        startX + c * stepX,
-        startY + r * stepY,
-        stepX,
-        stepY,
-        0,
-        0,
-        slotW,
-        slotH
-      );
+      const sx = Math.round(startX + c * stepX);
+      const sy = Math.round(startY + r * stepY);
+      const sw = Math.max(1, Math.round(startX + (c + 1) * stepX) - sx);
+      const sh = Math.max(1, Math.round(startY + (r + 1) * stepY) - sy);
+
+      cellCvs.width = sw;
+      cellCvs.height = sh;
+      cellCtx.imageSmoothingEnabled = true;
+      cellCtx.imageSmoothingQuality = "high";
+      cellCtx.clearRect(0, 0, sw, sh);
+      cellCtx.drawImage(rawImg, sx, sy, sw, sh, 0, 0, sw, sh);
+
       crops.push(cellCvs.toDataURL("image/png"));
     }
   }
 
-  // Tạo ảnh lưới 2x sắc nét có kẻ khung đỏ + đánh số #1 -> #35 ở góc trên trái từng ô
+  // 2. Tạo ảnh lưới phóng to 2x rõ nét có kẻ khung đỏ + đánh số #1 -> #35 ở góc trên trái từng ô
   const scale = 2;
   const gridCvs = document.createElement("canvas");
-  gridCvs.width = Math.round(activeW * scale);
-  gridCvs.height = Math.round(activeH * scale);
+  gridCvs.width = activeW * scale;
+  gridCvs.height = activeH * scale;
   const gCtx = gridCvs.getContext("2d");
   gCtx.imageSmoothingEnabled = false;
 
@@ -302,9 +298,9 @@ window.buildVerifiedGridPayload = function(rawImg, ratios) {
   }
 
   const cleanCroppedCvs = document.createElement("canvas");
-  cleanCroppedCvs.width = Math.round(activeW);
-  cleanCroppedCvs.height = Math.round(activeH);
-  cleanCroppedCvs.getContext("2d").drawImage(rawImg, startX, startY, activeW, activeH, 0, 0, cleanCroppedCvs.width, cleanCroppedCvs.height);
+  cleanCroppedCvs.width = activeW;
+  cleanCroppedCvs.height = activeH;
+  cleanCroppedCvs.getContext("2d").drawImage(rawImg, startX, startY, activeW, activeH, 0, 0, activeW, activeH);
 
   const payload = {
     verified: true,
@@ -326,7 +322,6 @@ document.addEventListener("click", (e) => {
   if (typeof pendingRawImg !== "undefined" && pendingRawImg && typeof currentCropRatios !== "undefined") {
     window.trainAiGridCorrection(pendingRawImg, currentCropRatios);
     const payload = window.buildVerifiedGridPayload(pendingRawImg, currentCropRatios);
-    // Cập nhật ngay pendingCrops & pendingImage chuẩn nét trước khi handler gốc chạy tiếp
     if (typeof pendingCrops !== "undefined") pendingCrops = payload.crops35;
     setTimeout(() => {
       if (typeof pendingImage !== "undefined" && pendingImage) {
@@ -373,7 +368,6 @@ window.runAiAutoCalibrateGrid = async function() {
     if (!detected) {
       detected = detectGrid5x7ByPixels(pendingRawImg);
       if (detected && brain.corrections.length > 0) {
-        // Bù trừ độ lệch trung bình từ các lần bạn từng sửa cho AI
         const recent = brain.corrections.slice(-5);
         const avg = (key) => Math.round((recent.reduce((s, item) => s + (item.delta[key] || 0), 0) / recent.length) * 2) / 2;
         const clamp = (v) => Math.round(Math.max(0, Math.min(45, v)) * 2) / 2;
@@ -446,7 +440,6 @@ Return ONLY JSON: {"box_2d": [ymin, xmin, ymax, xmax]} in 0..1000 scale.`;
       throw new Error("Không tìm thấy rãnh lưới 5×7 rõ ràng trên ảnh. Hãy kéo 4 thanh trượt rồi bấm Tiếp Tục để AI học khung này!");
     }
 
-    // Lưu lại thông số AI vừa gợi ý để đối chiếu xem bạn có kéo sửa lại không
     window.lastAiSuggestedRatios = { ...detected };
 
     if (typeof currentCropRatios !== "undefined") {
