@@ -1,5 +1,56 @@
 /* MODULE: SỬA THÔNG TIN Ô, TRAIN ICON & DẠY SỐ CHO AI (js/sua-o-va-day-ai.js) */
 
+window.updateSidePanelInfo = function(slotIdx, slotData) {
+  const badge = document.getElementById("sidePanelSlotIndexBadge");
+  const cropImgEl = document.getElementById("sidePanelCropImg");
+  const emptyIconEl = document.getElementById("sidePanelEmptyIcon");
+  const nameInp = document.getElementById("sidePanelItemName");
+  const qtyInp = document.getElementById("sidePanelItemQty");
+  const aiNotice = document.getElementById("sidePanelAiDetectedNotice");
+
+  if (badge) badge.textContent = `Ô ${slotIdx + 1}`;
+
+  if (!slotData || (!slotData.name && !slotData.cropImg)) {
+    if (cropImgEl) {
+      cropImgEl.src = "";
+      cropImgEl.classList.add("hidden");
+    }
+    if (emptyIconEl) emptyIconEl.classList.remove("hidden");
+    if (nameInp) nameInp.value = "";
+    if (qtyInp) qtyInp.value = 0;
+    if (aiNotice) aiNotice.textContent = "";
+    return;
+  }
+
+  let exactImg = slotData.cropImg || "";
+  if (!exactImg && slotData.name) {
+    const learnedArr = appState.learnedIcons?.[slotData.name];
+    exactImg = Array.isArray(learnedArr) && learnedArr.length > 0
+      ? learnedArr[learnedArr.length - 1].img
+      : (learnedArr?.img || "");
+  }
+
+  if (cropImgEl && emptyIconEl) {
+    if (exactImg) {
+      cropImgEl.src = exactImg;
+      cropImgEl.classList.remove("hidden");
+      emptyIconEl.classList.add("hidden");
+    } else {
+      cropImgEl.src = "";
+      cropImgEl.classList.add("hidden");
+      emptyIconEl.classList.remove("hidden");
+    }
+  }
+
+  if (nameInp) nameInp.value = slotData.name || "";
+  if (qtyInp) qtyInp.value = slotData.qty || 0;
+  if (aiNotice) {
+    aiNotice.textContent = (slotData.aiOriginalQty !== undefined && slotData.aiOriginalQty !== slotData.qty)
+      ? `(AI gốc: ${slotData.aiOriginalQty})`
+      : "";
+  }
+};
+
 function initSlotEditorAndTrainingEvents() {
   // 1. Gợi ý thông minh khi gõ tên vật phẩm
   const nameInput = document.getElementById("sidePanelItemName");
@@ -51,7 +102,6 @@ function initSlotEditorAndTrainingEvents() {
           appState.learnedIcons[newName] = oldVal ? [oldVal] : [];
         }
 
-        // Đẩy mẫu vừa cập nhật xuống cuối mảng để làm icon đại diện mới nhất
         appState.learnedIcons[newName] = appState.learnedIcons[newName].filter(
           sample => !(sample && sample.hash && getHammingDistance(hash, sample.hash) <= 2)
         );
@@ -65,7 +115,6 @@ function initSlotEditorAndTrainingEvents() {
         if (!appState.customKnownItems.includes(newName)) appState.customKnownItems.push(newName);
         if (typeof KNOWN_ITEMS !== "undefined" && !KNOWN_ITEMS.includes(newName)) KNOWN_ITEMS.push(newName);
 
-        // Đồng bộ tất cả 35 ô khớp mẫu
         const allSamplesForName = appState.learnedIcons[newName];
         let count = 1;
         for (let i = 0; i < 35; i++) {
