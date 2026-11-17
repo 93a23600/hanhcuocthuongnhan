@@ -79,6 +79,7 @@ function renderSettingsManageItemsTab(query = "") {
 
   if (filtered.length === 0) {
     listEl.innerHTML = `<p class="text-xs text-slate-500 italic text-center py-6">Không tìm thấy vật phẩm nào.</p>`;
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
@@ -105,7 +106,7 @@ function renderSettingsManageItemsTab(query = "") {
             <i data-lucide="git-merge" class="w-3 h-3"></i>
             <span>Đổi / Gộp</span>
           </button>
-          <button type="button" onclick="deleteItemFromSystem('${safeName}')" title="Xóa tên vật phẩm này (giữ nguyên ảnh ô)" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition">
+          <button type="button" onclick="deleteItemFromSystem('${safeName}')" title="Xóa vĩnh viễn tên vật phẩm này (giữ nguyên ảnh ô)" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           </button>
         </div>
