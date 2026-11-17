@@ -54,13 +54,13 @@ function getAllSystemItemsForManage() {
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "vi"));
 }
 
-/* THAO TÁC 1: XÓA BỎ VẬT PHẨM KHỎI HỆ THỐNG */
+/* THAO TÁC 1: XÓA BỎ TÊN VẬT PHẨM KHỎI HỆ THỐNG (GIỮ NGUYÊN ẢNH THỰC TẾ CỦA TỪNG Ô) */
 window.deleteItemFromSystem = function(itemName) {
   const cleanName = (itemName || "").trim();
   if (!cleanName) return;
   const lowerTarget = cleanName.toLowerCase();
 
-  if (!confirm(`Xóa hoàn toàn [${cleanName}] khỏi từ điển, bộ não AI và làm trống các ô đang chứa món này trong rương?`)) {
+  if (!confirm(`Xóa tên [${cleanName}] khỏi từ điển, bộ não AI và gỡ tên khỏi các ô trong rương (vẫn giữ nguyên ảnh cắt thực tế của từng ô để đặt tên lại)?`)) {
     return;
   }
 
@@ -87,10 +87,16 @@ window.deleteItemFromSystem = function(itemName) {
     });
   }
 
+  // CHỈ GỠ TÊN & SỐ LƯỢNG, TUYỆT ĐỐI GIỮ NGUYÊN ẢNH CẮT THỰC TẾ (cropImg) CỦA TỪNG Ô
   (appState.chests || []).forEach(chest => {
     (chest.slots || []).forEach((slot, idx) => {
       if (slot && slot.name && slot.name.trim().toLowerCase() === lowerTarget) {
-        chest.slots[idx] = { name: null, qty: 0, cropImg: null };
+        chest.slots[idx] = {
+          ...slot,
+          name: null,
+          qty: 0,
+          cropImg: slot.cropImg || null
+        };
       }
     });
   });
@@ -99,10 +105,10 @@ window.deleteItemFromSystem = function(itemName) {
   saveChestsState();
   const searchInp = document.getElementById("settingsManageItemSearch");
   renderSettingsManageItemsTab(searchInp ? searchInp.value : "");
-  showToast(`Đã xóa bỏ [${cleanName}] khỏi toàn hệ thống!`, "info");
+  showToast(`Đã xóa tên [${cleanName}] và giữ nguyên ảnh thực tế của các ô để đặt tên lại!`, "info");
 };
 
-/* MỞ BẢNG CHỌN VẬT PHẨM ĐÍCH ĐỂ ĐỔI / GỘP (CHUYÊN NGHIỆP - KHÔNG DÙNG PROMPT) */
+/* MỞ BẢNG CHỌN VẬT PHẨM ĐÍCH ĐỂ ĐỔI / GỘP */
 window.openMergePanelForItem = function(sourceName) {
   manageMergeSourceItem = sourceName;
   manageMergeSelectedTarget = "";
@@ -127,7 +133,6 @@ window.selectMergeTargetRadio = function(targetName) {
 
 window.onMergeCustomInput = function(val) {
   manageMergeSelectedTarget = val.trim();
-  // Bỏ chọn radio nếu tên gõ tay không khớp item nào trong list
   document.querySelectorAll(".radio-merge-target").forEach(r => {
     r.checked = (r.value.toLowerCase() === manageMergeSelectedTarget.toLowerCase());
   });
@@ -199,7 +204,7 @@ function renderMergeTargetOptionsList() {
   }).join("");
 }
 
-/* THỰC THI GỘP / ĐỔI TÊN SAU KHI BẤM XÁC NHẬN */
+/* THỰC THI GỘP / ĐỔI TÊN SAU KHI BẤM XÁC NHẬN (GIỮ NGUYÊN ẢNH GỐC TỪNG Ô) */
 window.executeMergeOrRenameItem = function() {
   const sourceName = (manageMergeSourceItem || "").trim();
   const targetName = (manageMergeSelectedTarget || "").trim();
@@ -279,7 +284,7 @@ window.executeMergeOrRenameItem = function() {
     }
   }
 
-  // 6. Đổi tên toàn bộ các ô trong tất cả rương
+  // 6. Chỉ đổi tên ở các ô trong rương, giữ nguyên ảnh cropImg riêng của từng ô
   (appState.chests || []).forEach(chest => {
     (chest.slots || []).forEach(slot => {
       if (slot && slot.name && slot.name.trim().toLowerCase() === lowerSource) {
@@ -328,7 +333,7 @@ function renderSettingsManageItemsTab(query = "") {
             <div>
               <span class="text-[10px] uppercase font-bold text-sky-400 block">Đang chọn nguồn để Đổi / Gộp:</span>
               <span class="text-sm font-black text-white">${manageMergeSourceItem}</span>
-              <span class="text-[11px] text-slate-400 ml-1.5">(${sourceObj?.sampleCount || 0} mẫu AI • ${sourceObj?.chestQty || 0} cái)</span>
+              <span class="text-[11px] text-slate-400 ml-1.5">(${sourceObj?.sampleCount \vert{}\vert{} 0} mẫu AI • ${sourceObj?.chestQty || 0} cái)</span>
             </div>
           </div>
           <button type="button" onclick="closeMergePanel()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1">
@@ -370,51 +375,4 @@ function renderSettingsManageItemsTab(query = "") {
   // CHẾ ĐỘ 1: DANH SÁCH TỔNG QUAN TOÀN BỘ VẬT PHẨM
   containerEl.innerHTML = `
     <div class="relative">
-      <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-      <input type="text" id="settingsManageItemSearch" value="${query.replace(/"/g, "&quot;")}" oninput="renderSettingsManageItemsTab(this.value)" placeholder="Tìm vật phẩm để đổi tên, gộp vào món khác hoặc xóa..." class="w-full pl-8 pr-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-amber-500">
-    </div>
-    <div id="settingsManageItemList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72"></div>
-  `;
-
-  const listEl = document.getElementById("settingsManageItemList");
-  const q = query.trim().toLowerCase();
-  const filtered = allItems.filter(i => i.name.toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    listEl.innerHTML = `<p class="text-xs text-slate-500 italic text-center py-6">Không tìm thấy vật phẩm nào.</p>`;
-    return;
-  }
-
-  listEl.innerHTML = filtered.map(item => {
-    const safeName = item.name.replace(/'/g, "\\'");
-    const thumbHtml = item.img
-      ? `<img src="${item.img}" class="w-7 h-7 rounded object-cover border border-slate-700 bg-slate-900 shrink-0">`
-      : `<div class="w-7 h-7 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] text-slate-600 shrink-0">✦</div>`;
-
-    return `
-      <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition">
-        <div class="flex items-center gap-2.5 min-w-0">
-          ${thumbHtml}
-          <div class="min-w-0">
-            <span class="text-xs font-bold text-white block truncate">${item.name}</span>
-            <span class="text-[10px] text-slate-400 font-mono">
-              ${item.sampleCount} mẫu AI &bull; Đang có: <b class="text-amber-400">${item.chestQty.toLocaleString("vi-VN")}</b> (${item.chestSlots} ô)
-            </span>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-1.5 shrink-0">
-          <button type="button" onclick="openMergePanelForItem('${safeName}')" title="Đổi tên hoặc gộp vào vật phẩm khác" class="px-2.5 py-1 rounded-lg bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 border border-sky-700/50 text-[11px] font-semibold flex items-center gap-1 transition">
-            <i data-lucide="git-merge" class="w-3 h-3"></i>
-            <span>Đổi / Gộp</span>
-          </button>
-          <button type="button" onclick="deleteItemFromSystem('${safeName}')" title="Xóa bỏ vật phẩm này" class="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  if (window.lucide) lucide.createIcons();
-}
+      <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-
