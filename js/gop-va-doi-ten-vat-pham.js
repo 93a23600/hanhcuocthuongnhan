@@ -1,4 +1,4 @@
-/* MODULE: ĐỔI TÊN & GỘP VẬT PHẨM / GOM XÃ (js/gop-va-doi-ten-vat-pham.js) */
+/* MODULE 3: ĐỔI TÊN & GỘP VẬT PHẨM / GOM XÃ ĐỒNG BỘ (js/gop-va-doi-ten-vat-pham.js) */
 
 let manageMergeSourceItem = null;
 let manageMergeSelectedTarget = "";
@@ -8,7 +8,9 @@ window.openMergePanelForItem = function(sourceName) {
   manageMergeSourceItem = sourceName;
   manageMergeSelectedTarget = "";
   manageMergeSearchTarget = "";
-  renderSettingsManageItemsTab();
+  if (typeof renderSettingsManageItemsTab === "function") {
+    renderSettingsManageItemsTab();
+  }
 };
 
 window.closeMergePanel = function() {
@@ -16,7 +18,9 @@ window.closeMergePanel = function() {
   manageMergeSelectedTarget = "";
   manageMergeSearchTarget = "";
   const searchInp = document.getElementById("settingsManageItemSearch");
-  renderSettingsManageItemsTab(searchInp ? searchInp.value : "");
+  if (typeof renderSettingsManageItemsTab === "function") {
+    renderSettingsManageItemsTab(searchInp ? searchInp.value : "");
+  }
 };
 
 window.selectMergeTargetRadio = function(targetName) {
@@ -109,4 +113,117 @@ window.executeMergeOrRenameItem = function() {
   if (lowerSource === lowerTarget && sourceName === targetName) return;
 
   const allItems = getAllSystemItemsForManage();
-  const matchedExisting = allItems.find(i => i.name.toLowerCase() === lowerTarget && i.name.toLowerCase() !==
+  const matchedExisting = allItems.find(
+    i => i.name.toLowerCase() === lowerTarget && i.name.toLowerCase() !== lowerSource
+  );
+  const finalTargetName = matchedExisting ? matchedExisting.name : targetName;
+  const isMerging = !!matchedExisting;
+
+  // 1. Khóa vĩnh viễn tên nguồn cũ vào deletedKnownItems (để F5 không hồi sinh) và mở khóa tên đích mới
+  if (!Array.isArray(appState.deletedKnownItems)) {
+    appState.deletedKnownItems = [];
+  }
+  if (lowerSource !== finalTargetName.toLowerCase() && !appState.deletedKnownItems.some(n => n.trim().toLowerCase() === lowerSource)) {
+    appState.deletedKnownItems.push(sourceName);
+  }
+  appState.deletedKnownItems = appState.deletedKnownItems.filter(
+    n => n.trim().toLowerCase() !== finalTargetName.toLowerCase()
+  );
+
+  // 2. Gộp danh sách mẫu icon (learnedIcons)
+  if (!appState.learnedIcons) appState.learnedIcons = {};
+  let collectedSamples = [];
+  Object.keys(appState.learnedIcons).forEach(k => {
+    if (k.trim().toLowerCase() === lowerSource) {
+      const val = appState.learnedIcons[k];
+      collectedSamples = collectedSamples.concat(Array.isArray(val) ? val : (val ? [val] : []));
+      delete appState.learnedIcons[k];
+    }
+  });
+
+  if (collectedSamples.length > 0) {
+    if (!Array.isArray(appState.learnedIcons[finalTargetName])) {
+      const cur = appState.learnedIcons[finalTargetName];
+      appState.learnedIcons[finalTargetName] = cur ? [cur] : [];
+    }
+    appState.learnedIcons[finalTargetName] = appState.learnedIcons[finalTargetName].concat(collectedSamples);
+  }
+
+  // 3. Cập nhật từ điển tên KNOWN_ITEMS & customKnownItems
+  if (typeof KNOWN_ITEMS !== "undefined" && Array.isArray(KNOWN_ITEMS)) {
+    KNOWN_ITEMS = KNOWN_ITEMS.filter(n => n.trim().toLowerCase() !== lowerSource);
+    if (!KNOWN_ITEMS.some(n => n.trim().toLowerCase() === finalTargetName.toLowerCase())) {
+      KNOWN_ITEMS.push(finalTargetName);
+    }
+  }
+  appState.customKnownItems = (appState.customKnownItems || []).filter(
+    n => n.trim().toLowerCase() !== lowerSource
+  );
+  if (!appState.customKnownItems.some(n => n.trim().toLowerCase() === finalTargetName.toLowerCase())) {
+    appState.customKnownItems.push(finalTargetName);
+  }
+
+  // 4. Chuyển quy tắc số đã dạy
+  (appState.trainedNumberErrors || []).forEach(r => {
+    if ((r.itemName || "").trim().toLowerCase() === lowerSource) {
+      r.itemName = finalTargetName;
+    }
+  });
+
+  // 5. Chuyển trạng thái Trang bị & Đồ bỏ qua
+  const wasEquip = (appState.equipmentItems || []).some(n => n.trim().toLowerCase() === lowerSource);
+  appState.equipmentItems = (appState.equipmentItems || []).filter(
+    n => n.trim().toLowerCase() !== lowerSource
+  );
+  if (wasEquip && !appState.equipmentItems.some(n => n.trim().toLowerCase() === finalTargetName.toLowerCase())) {
+    appState.equipmentItems.push(finalTargetName);
+  }
+
+  const wasIgnored = (appState.ignoredItems || []).some(n => n.trim().toLowerCase() === lowerSource);
+  appState.ignoredItems = (appState.ignoredItems || []).filter(
+    n => n.trim().toLowerCase() !== lowerSource
+  );
+  if (wasIgnored && !appState.ignoredItems.some(n => n.trim().toLowerCase() === finalTargetName.toLowerCase())) {
+    appState.ignoredItems.push(finalTargetName);
+  }
+
+  // 6. Gộp số liệu trong Snapshot (nếu có)
+  if (appState.snapshot) {
+    let snapQty = 0;
+    Object.keys(appState.snapshot).forEach(k => {
+      if (k.trim().toLowerCase() === lowerSource) {
+        snapQty += (parseInt(appState.snapshot[k]) || 0);
+        delete appState.snapshot[k];
+      }
+    });
+    if (snapQty > 0) {
+      appState.snapshot[finalTargetName] = (appState.snapshot[finalTargetName] || 0) + snapQty;
+    }
+  }
+
+  // 7. Chỉ đổi tên ở các ô trong rương, giữ nguyên ảnh cropImg riêng của từng ô
+  (appState.chests || []).forEach(chest => {
+    (chest.slots || []).forEach(slot => {
+      if (slot && slot.name && slot.name.trim().toLowerCase() === lowerSource) {
+        slot.name = finalTargetName;
+      }
+    });
+  });
+
+  saveBrainState();
+  saveChestsState();
+  manageMergeSourceItem = null;
+  manageMergeSelectedTarget = "";
+  manageMergeSearchTarget = "";
+
+  const searchInp = document.getElementById("settingsManageItemSearch");
+  if (typeof renderSettingsManageItemsTab === "function") {
+    renderSettingsManageItemsTab(searchInp ? searchInp.value : "");
+  }
+  showToast(
+    isMerging
+      ? `Đã gộp [${sourceName}] vào [${finalTargetName}] và xóa vĩnh viễn [${sourceName}]!`
+      : `Đã đổi tên [${sourceName}] → [${finalTargetName}]!`,
+    "success"
+  );
+};
