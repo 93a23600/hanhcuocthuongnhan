@@ -1,6 +1,19 @@
 /* MODULE 3: GỌI API GEMINI VISION ĐỌC 35 Ô (js/gemini-vision.js) */
 
 async function analyzeChestWithGemini(base64Image) {
+  // 1. Gom toàn bộ danh sách tên vật phẩm hợp lệ đang có trong dữ liệu hệ thống
+  const validNameMap = new Map();
+  if (typeof KNOWN_ITEMS !== "undefined" && Array.isArray(KNOWN_ITEMS)) {
+    KNOWN_ITEMS.forEach(n => { if (n && n.trim()) validNameMap.set(n.trim().toLowerCase(), n.trim()); });
+  }
+  if (Array.isArray(appState.customKnownItems)) {
+    appState.customKnownItems.forEach(n => { if (n && n.trim()) validNameMap.set(n.trim().toLowerCase(), n.trim()); });
+  }
+  if (appState.learnedIcons) {
+    Object.keys(appState.learnedIcons).forEach(n => { if (n && n.trim()) validNameMap.set(n.trim().toLowerCase(), n.trim()); });
+  }
+  const validItemNames = Array.from(validNameMap.values());
+
   let trainingPromptNotes = "";
   if (appState.trainedNumberErrors && appState.trainedNumberErrors.length > 0) {
     const errorExamples = appState.trainedNumberErrors.slice(-5).map(e => 
@@ -10,16 +23,17 @@ async function analyzeChestWithGemini(base64Image) {
   }
 
   const prompt = `Trích xuất tất cả đúng 35 ô theo thứ tự từ trái qua phải, từ trên xuống dưới của lưới rương 5 cột x 7 hàng.
-Danh mục tên vật phẩm chuẩn đã biết: ${JSON.stringify(KNOWN_ITEMS)}.${trainingPromptNotes}
+DANH SÁCH TÊN VẬT PHẨM DUY NHẤT ĐƯỢC PHÉP DÙNG: ${JSON.stringify(validItemNames)}.${trainingPromptNotes}
 
-QUY TẮC BẮT BUỘC (TUYỆT ĐỐI KHÔNG SUY DIỄN SAI):
-1. KHÔNG ÉP TÊN: Chỉ dùng tên trong "Danh mục tên vật phẩm chuẩn đã biết" khi icon thực sự khớp đúng vật phẩm đó. Nếu ô chứa TRANG BỊ (vũ khí, nón, áo, giày, nhẫn, ngọc bội...) hoặc vật phẩm lạ chưa có trong danh mục thì TUYỆT ĐỐI KHÔNG đoán mò hay gán bừa vào tên có sẵn — hãy ghi name là "Vật phẩm lạ" (hoặc "Trang bị lạ" nếu là trang bị).
-2. SỐ LƯỢNG & ĐỒ KHÔNG XẾP CHỒNG: Chỉ đọc con số ở góc dưới bên phải ô. Nếu ô có vật phẩm/trang bị nhưng góc dưới bên phải KHÔNG có chữ số nào (đồ đơn lẻ không xếp chồng), ghi qty là 1 và hasStackNum là false. Nếu có chữ số (ví dụ 999, 120, 2...), ghi đúng số đó và hasStackNum là true. Nếu ô trống hoàn toàn, ghi name là null, qty là 0, hasStackNum là false.
+QUY TẮC BẮT BUỘC (TUYỆT ĐỐI TUÂN THỦ):
+1. CHỈ ĐỌC TÊN CÓ TRONG DANH SÁCH TRÊN: Bạn CHỈ được phép điền trường "name" bằng một tên có sẵn y hệt trong "DANH SÁCH TÊN VẬT PHẨM DUY NHẤT ĐƯỢC PHÉP DÙNG".
+2. CẤM BỊA TÊN & CẤM ĐOÁN MÒ: Tuyệt đối KHÔNG tự nghĩ ra tên vật phẩm từ kiến thức bên ngoài, KHÔNG ghi "Vật phẩm lạ" hay "Trang bị lạ". Nếu ô đó trống, hoặc chứa vật phẩm/trang bị không giống chính xác món nào trong danh sách trên, BẮT BUỘC ghi "name": null.
+3. SỐ LƯỢNG & ĐỒ KHÔNG XẾP CHỒNG: Chỉ đọc con số ở góc dưới bên phải ô. Nếu ô có hình đồ nhưng góc dưới bên phải KHÔNG có chữ số nào, ghi "qty": 1 và "hasStackNum": false. Nếu có chữ số (ví dụ 999, 120, 2...), ghi đúng số đó và "hasStackNum": true. Nếu "name" là null nhưng ô vẫn có hình đồ chưa nhận diện được thì vẫn đọc đúng số lượng ở góc (nếu không có số thì qty: 1, hasStackNum: false); nếu ô trống không có hình đồ thì ghi "qty": 0, "hasStackNum": false.
 
 Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô:
 [
-  {"name": "Tên vật phẩm", "qty": 999, "hasStackNum": true},
-  {"name": "Trang bị lạ", "qty": 1, "hasStackNum": false},
+  {"name": "Tên vật phẩm khớp trong danh sách", "qty": 999, "hasStackNum": true},
+  {"name": null, "qty": 775, "hasStackNum": true},
   {"name": null, "qty": 0, "hasStackNum": false}
 ]`;
 
@@ -46,5 +60,18 @@ Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô:
   }
 
   const data = await response.json();
-  return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
+  const rawSlots = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "[]");
+
+  // 2. Lớp khóa cứng đầu ra: Bất kỳ tên nào không nằm trong validNameMap đều bị xóa về null (để trống)
+  return Array.from({ length: 35 }, (_, idx) => {
+    const slot = rawSlots[idx] || {};
+    const rawName = typeof slot.name === "string" ? slot.name.trim() : "";
+    const matchedStandardName = rawName ? (validNameMap.get(rawName.toLowerCase()) || null) : null;
+
+    return {
+      name: matchedStandardName,
+      qty: parseInt(slot.qty) || 0,
+      hasStackNum: Boolean(slot.hasStackNum)
+    };
+  });
 }
