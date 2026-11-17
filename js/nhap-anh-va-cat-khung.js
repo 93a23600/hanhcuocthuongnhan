@@ -141,6 +141,14 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
+  // Nút AI Tự Căn Khung (Chỉ đặt khung, không tự bấm tiếp tục)
+  document.addEventListener("click", (e) => {
+    const btnAi = e.target.closest("#btnAiAutoCalibrate");
+    if (btnAi && typeof window.runAiAutoCalibrateGrid === "function") {
+      window.runAiAutoCalibrateGrid();
+    }
+  });
+
   const btnCancelCalib = document.getElementById("btnCancelCalibrate");
   if (btnCancelCalib) {
     btnCancelCalib.onclick = () => {
