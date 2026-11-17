@@ -92,10 +92,11 @@ async function executeUpload(accountName, chestTitle) {
         }
       }
 
+      // Lưu độc lập số lượng (qty) và tên vật phẩm (name), không xóa số lượng về 0 khi chưa có tên
       finalSlots.push({
         name: assignedName,
-        qty: assignedName ? assignedQty : 0,
-        hasStackNum: assignedName ? hasStackNum : false,
+        qty: assignedQty,
+        hasStackNum: hasStackNum,
         cropImg: crop,
         aiOriginalQty: assignedQty
       });
