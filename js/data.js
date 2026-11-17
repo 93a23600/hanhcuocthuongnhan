@@ -1,5 +1,5 @@
 /* Danh mục tên item chuẩn của game */
-const KNOWN_ITEMS = [
+let KNOWN_ITEMS = [
   "Võ sĩ yêu đái", "Quỷ Hồn", "Linh Tán", "Thiết bát quái", "Linh Cầm",
   "Cánh dơi", "Vòng Bạch Ngọc", "Canh Mộc Bài", "Mặt nạ Võ sĩ", "Bùa vàng",
   "Linh Tiêu", "Võ sĩ đao", "Lệnh bài sư môn Ngũ Độc", "Bạch Ngưu Lân",
