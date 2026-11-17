@@ -130,7 +130,9 @@ function renderGameGridChest() {
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
     cell.className = `game-slot-cell relative overflow-hidden ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
-    cell.title = hasItem ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
+    cell.title = hasItem
+      ? (slot.qty > 1 ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `[Ô ${i + 1}] ${slot.name}`)
+      : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
       const normName = slot.name.trim().toLowerCase();
@@ -162,7 +164,10 @@ function renderGameGridChest() {
         ? `<img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit]">`
         : `<div class="w-full h-full flex items-center justify-center p-1 text-center text-[9px] font-semibold text-slate-300 leading-tight bg-slate-900/90">${slot.name}</div>`;
 
-      const qtyBadgeHtml = showQtyOverlay
+      const isSingleEquip = (appState.equipmentItems || []).some(e => e.trim().toLowerCase() === normName);
+      const shouldShowQtyBadge = showQtyOverlay && slot.qty > 1 && !isSingleEquip && slot.hasStackNum !== false;
+
+      const qtyBadgeHtml = shouldShowQtyBadge
         ? `<span class="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-950/85 text-[11px] font-mono font-black text-amber-300 leading-none py-0.5 shadow pointer-events-none">x${slot.qty}</span>`
         : "";
 
