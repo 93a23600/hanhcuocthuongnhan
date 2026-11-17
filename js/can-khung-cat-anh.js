@@ -1,4 +1,4 @@
-/* MODULE 2: NHẬN ẢNH, CĂN VIỀN & CẮT 35 Ô 5x7 (js/can-khung-cat-anh.js) */
+/* MODULE 2: NHẬN ẢNH, CĂN VIỀN & CẮT 35 Ô 5x7 SẮC NÉT 1:1 (js/can-khung-cat-anh.js) */
 
 let pendingRawImg = null;
 let currentCropRatios = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -17,7 +17,22 @@ function handleIncomingFile(file) {
     const img = new Image();
     img.onload = () => {
       pendingRawImg = img;
-      currentCropRatios = Object.assign({}, appState.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 });
+
+      // Ưu tiên nạp khung chuẩn đã train riêng cho đúng cỡ ảnh (WxH) nếu có, sau đó mới tới learnedGridCrop
+      let initialRatios = appState.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 };
+      try {
+        const trainRaw = localStorage.getItem("HKTN_AI_CROP_TRAIN_BRAIN");
+        if (trainRaw) {
+          const brain = JSON.parse(trainRaw);
+          const sizeKey = `${img.naturalWidth}x${img.naturalHeight}`;
+          if (brain?.profiles?.[sizeKey]) {
+            const p = brain.profiles[sizeKey];
+            initialRatios = { top: p.top, bottom: p.bottom, left: p.left, right: p.right };
+          }
+        }
+      } catch (err) {}
+
+      currentCropRatios = Object.assign({}, initialRatios);
       openCalibrateModal();
     };
     img.onerror = () => alert("Không thể đọc định dạng ảnh này!");
@@ -35,10 +50,16 @@ function openCalibrateModal() {
   const rLeft = document.getElementById("rangeCropLeft");
   const rRight = document.getElementById("rangeCropRight");
 
-  if (rTop) rTop.value = currentCropRatios.top;
-  if (rBottom) rBottom.value = currentCropRatios.bottom;
-  if (rLeft) rLeft.value = currentCropRatios.left;
-  if (rRight) rRight.value = currentCropRatios.right;
+  [
+    [rTop, currentCropRatios.top],
+    [rBottom, currentCropRatios.bottom],
+    [rLeft, currentCropRatios.left],
+    [rRight, currentCropRatios.right]
+  ].forEach(([el, val]) => {
+    if (!el) return;
+    if (val > parseFloat(el.max || 30)) el.max = Math.ceil(val + 5);
+    el.value = val;
+  });
 
   updateRangeLabels();
   drawCalibrateGrid();
@@ -66,6 +87,7 @@ function drawCalibrateGrid() {
   canvas.width = pendingRawImg.naturalWidth;
   canvas.height = pendingRawImg.naturalHeight;
 
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(pendingRawImg, 0, 0);
 
   const x = (currentCropRatios.left / 100) * canvas.width;
@@ -105,6 +127,7 @@ function drawCalibrateGrid() {
   ctx.setLineDash([]);
 }
 
+// Cắt 35 ô (5 cột x 7 hàng) giữ nguyên 100% độ phân giải pixel gốc (không ép 90x90 gây mờ)
 function sliceGridWithRatios(imgElement, ratios) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -112,25 +135,28 @@ function sliceGridWithRatios(imgElement, ratios) {
   const totalW = imgElement.naturalWidth;
   const totalH = imgElement.naturalHeight;
 
-  const startX = (ratios.left / 100) * totalW;
-  const startY = (ratios.top / 100) * totalH;
-  const activeW = totalW - startX - ((ratios.right / 100) * totalW);
-  const activeH = totalH - startY - ((ratios.bottom / 100) * totalH);
+  const startX = Math.round((ratios.left / 100) * totalW);
+  const startY = Math.round((ratios.top / 100) * totalH);
+  const activeW = Math.max(5, Math.round(totalW - startX - ((ratios.right / 100) * totalW)));
+  const activeH = Math.max(7, Math.round(totalH - startY - ((ratios.bottom / 100) * totalH)));
 
   const stepX = activeW / 5;
   const stepY = activeH / 7;
 
   const crops = [];
-  canvas.width = 90;
-  canvas.height = 90;
 
   for (let r = 0; r < 7; r++) {
     for (let c = 0; c < 5; c++) {
-      ctx.clearRect(0, 0, 90, 90);
-      const srcX = startX + c * stepX;
-      const srcY = startY + r * stepY;
+      const srcX = Math.round(startX + c * stepX);
+      const srcY = Math.round(startY + r * stepY);
+      const cellW = Math.max(1, Math.round(startX + (c + 1) * stepX) - srcX);
+      const cellH = Math.max(1, Math.round(startY + (r + 1) * stepY) - srcY);
 
-      ctx.drawImage(imgElement, srcX, srcY, stepX, stepY, 0, 0, 90, 90);
+      canvas.width = cellW;
+      canvas.height = cellH;
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, cellW, cellH);
+      ctx.drawImage(imgElement, srcX, srcY, cellW, cellH, 0, 0, cellW, cellH);
       crops.push(canvas.toDataURL("image/png"));
     }
   }
