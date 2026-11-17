@@ -1,6 +1,8 @@
 /* GIAO DIỆN 4: KHUNG TAB RƯƠNG GAME 5x7 & PANEL CHỈNH SỬA (js/khung-tab-ruong.js) */
 
 function renderChestTabHTML() {
+  const isShowQty = appState.showSlotQtyOverlay !== false;
+
   return `
     <div id="tabGameGridView" class="space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl text-xs">
@@ -13,7 +15,11 @@ function renderChestTabHTML() {
             <span>Thêm Rương</span>
           </button>
         </div>
-        <span class="text-slate-400 text-[11px] italic hidden md:inline">Nhấp ô để sửa • Đổi tên 1 ô tự đồng bộ các ô trùng</span>
+
+        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 hover:border-amber-500/60 text-slate-200 font-semibold transition" title="Tắt để nhìn rõ số lượng gốc trên ảnh chụp">
+          <input type="checkbox" id="chkToggleSlotQtyOverlay" ${isShowQty ? "checked" : ""} onchange="toggleSlotQtyOverlay(this.checked)" class="accent-emerald-500 w-3.5 h-3.5 cursor-pointer">
+          <span>Hiện số lượng AI</span>
+        </label>
       </div>
 
       <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
@@ -43,7 +49,7 @@ function renderChestTabHTML() {
             </div>
             <div class="text-[11px] text-slate-400 leading-tight">
               <span class="text-slate-200 font-semibold block">Icon thực tế từ ô</span>
-              <span>Hệ thống tự nhớ ảnh này để gán cho các acc khác.</span>
+              <span>Ảnh gốc cắt trực tiếp tại ô đang nhấn để soi số chuẩn.</span>
             </div>
           </div>
 
