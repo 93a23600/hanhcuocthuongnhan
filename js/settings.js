@@ -39,9 +39,12 @@ function ensureSettingsModalDOM() {
   const includedCount = Array.isArray(appState.reportIncludedAccounts)
     ? appState.reportIncludedAccounts.length
     : allAccs.length;
+  const totalItemsCount = typeof getAllSystemItemsForManage === "function"
+    ? getAllSystemItemsForManage().length
+    : 0;
 
   modal.innerHTML = `
-    <div class="bg-[#121922] border border-slate-700 w-full max-w-xl rounded-2xl p-5 shadow-2xl flex flex-col max-h-[90vh] space-y-4">
+    <div class="bg-[#121922] border border-slate-700 w-full max-w-2xl rounded-2xl p-5 shadow-2xl flex flex-col max-h-[90vh] space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2">
           <i data-lucide="sliders-horizontal" class="w-4 h-4 text-amber-400"></i>
@@ -50,16 +53,19 @@ function ensureSettingsModalDOM() {
         <button type="button" id="btnCloseAppSettings" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
 
-      <!-- Thanh chọn 3 Tab -->
-      <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
-        <button type="button" id="settingsTabAdkBtn" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white transition">
-          1. ADK / Thiết Bát Quái
+      <!-- Thanh chọn 4 Tab -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
+        <button type="button" id="settingsTabAdkBtn" class="py-2 px-2 rounded-lg text-xs font-bold bg-emerald-600 text-white transition">
+          1. ADK / TBQ
         </button>
-        <button type="button" id="settingsTabEquipBtn" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+        <button type="button" id="settingsTabEquipBtn" class="py-2 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
           2. Trang Bị (<span id="settingsEquipCount">0</span>)
         </button>
-        <button type="button" id="settingsTabReportAccBtn" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+        <button type="button" id="settingsTabReportAccBtn" class="py-2 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
           3. Acc Báo Cáo (<span id="settingsReportAccCount">${includedCount}/${allAccs.length}</span>)
+        </button>
+        <button type="button" id="settingsTabManageItemsBtn" class="py-2 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+          4. Quản Lý Đồ (<span id="settingsManageItemCount">${totalItemsCount}</span>)
         </button>
       </div>
 
@@ -85,13 +91,22 @@ function ensureSettingsModalDOM() {
       <!-- NỘI DUNG TAB 3: CHỌN ACC HIỂN THỊ TRONG BÁO CÁO -->
       <div id="settingsViewReportAcc" class="hidden flex-1 overflow-y-auto space-y-3 pr-1 max-h-80">
         <div class="p-3 rounded-xl bg-emerald-950/20 border border-emerald-700/40 text-xs text-emerald-200/90 flex items-center justify-between gap-2">
-          <span>Chỉ các tài khoản <b>được tích chọn</b> mới cộng dồn vật phẩm vào tab <b>Báo Cáo</b>.</span>
+          <span>Chỉ các tài khoản <b>được tích chọn</b> mới tính khi bật nút <b>Lọc Acc</b>.</span>
           <div class="flex gap-1.5 shrink-0">
             <button type="button" id="btnSelectAllReportAcc" class="px-2 py-1 rounded bg-emerald-800/60 hover:bg-emerald-700 text-[11px] font-semibold text-white">Chọn hết</button>
             <button type="button" id="btnClearAllReportAcc" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300">Bỏ hết</button>
           </div>
         </div>
         <div id="settingsReportAccountList" class="space-y-2"></div>
+      </div>
+
+      <!-- NỘI DUNG TAB 4: QUẢN LÝ, XÓA & GỘP VẬT PHẨM -->
+      <div id="settingsViewManageItems" class="hidden flex-1 flex flex-col overflow-hidden space-y-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="settingsManageItemSearch" placeholder="Tìm vật phẩm để đổi tên, gộp vào món khác hoặc xóa..." class="w-full pl-8 pr-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-amber-500">
+        </div>
+        <div id="settingsManageItemList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72"></div>
       </div>
 
       <div class="pt-3 border-t border-slate-800 flex justify-end">
@@ -111,11 +126,15 @@ function bindSettingsEvents() {
   const tabAdkBtn = document.getElementById("settingsTabAdkBtn");
   const tabEquipBtn = document.getElementById("settingsTabEquipBtn");
   const tabReportAccBtn = document.getElementById("settingsTabReportAccBtn");
+  const tabManageItemsBtn = document.getElementById("settingsTabManageItemsBtn");
 
   const viewAdk = document.getElementById("settingsViewAdk");
   const viewEquip = document.getElementById("settingsViewEquip");
   const viewReportAcc = document.getElementById("settingsViewReportAcc");
+  const viewManageItems = document.getElementById("settingsViewManageItems");
+
   const equipSearch = document.getElementById("settingsEquipSearch");
+  const manageSearch = document.getElementById("settingsManageItemSearch");
 
   const closeModal = () => {
     if (modal) modal.classList.add("hidden");
@@ -128,34 +147,48 @@ function bindSettingsEvents() {
   if (btnDone) btnDone.onclick = closeModal;
 
   const setActiveSettingsTab = (activeTab) => {
-    [tabAdkBtn, tabEquipBtn, tabReportAccBtn].forEach(btn => {
-      if (btn) btn.className = "flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+    [tabAdkBtn, tabEquipBtn, tabReportAccBtn, tabManageItemsBtn].forEach(btn => {
+      if (btn) btn.className = "py-2 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
     });
-    [viewAdk, viewEquip, viewReportAcc].forEach(view => {
+    [viewAdk, viewEquip, viewReportAcc, viewManageItems].forEach(view => {
       if (view) view.classList.add("hidden");
     });
 
     if (activeTab === "adk") {
-      if (tabAdkBtn) tabAdkBtn.className = "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
+      if (tabAdkBtn) tabAdkBtn.className = "py-2 px-2 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
       if (viewAdk) viewAdk.classList.remove("hidden");
       renderSettingsAdkTab();
     } else if (activeTab === "equip") {
-      if (tabEquipBtn) tabEquipBtn.className = "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
+      if (tabEquipBtn) tabEquipBtn.className = "py-2 px-2 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
       if (viewEquip) viewEquip.classList.remove("hidden");
       renderSettingsEquipTab(equipSearch ? equipSearch.value : "");
     } else if (activeTab === "reportAcc") {
-      if (tabReportAccBtn) tabReportAccBtn.className = "flex-1 py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
+      if (tabReportAccBtn) tabReportAccBtn.className = "py-2 px-2 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
       if (viewReportAcc) viewReportAcc.classList.remove("hidden");
       renderSettingsReportAccTab();
+    } else if (activeTab === "manageItems") {
+      if (tabManageItemsBtn) tabManageItemsBtn.className = "py-2 px-2 rounded-lg text-xs font-bold bg-emerald-600 text-white transition";
+      if (viewManageItems) viewManageItems.classList.remove("hidden");
+      if (typeof renderSettingsManageItemsTab === "function") {
+        renderSettingsManageItemsTab(manageSearch ? manageSearch.value : "");
+      }
     }
   };
 
   if (tabAdkBtn) tabAdkBtn.onclick = () => setActiveSettingsTab("adk");
   if (tabEquipBtn) tabEquipBtn.onclick = () => setActiveSettingsTab("equip");
   if (tabReportAccBtn) tabReportAccBtn.onclick = () => setActiveSettingsTab("reportAcc");
+  if (tabManageItemsBtn) tabManageItemsBtn.onclick = () => setActiveSettingsTab("manageItems");
 
   if (equipSearch) {
     equipSearch.oninput = (e) => renderSettingsEquipTab(e.target.value);
+  }
+  if (manageSearch) {
+    manageSearch.oninput = (e) => {
+      if (typeof renderSettingsManageItemsTab === "function") {
+        renderSettingsManageItemsTab(e.target.value);
+      }
+    };
   }
 
   const btnSelectAll = document.getElementById("btnSelectAllReportAcc");
@@ -188,6 +221,7 @@ function initSettingsModal() {
       renderSettingsAdkTab();
       renderSettingsEquipTab();
       renderSettingsReportAccTab();
+      if (typeof renderSettingsManageItemsTab === "function") renderSettingsManageItemsTab();
       modal.classList.remove("hidden");
       if (window.lucide) lucide.createIcons();
     };
@@ -303,7 +337,6 @@ function renderSettingsReportAccTab() {
   if (!listEl) return;
 
   const accounts = getAllKnownAccounts();
-  // Nếu chưa từng cấu hình (null), mặc định coi như tất cả đều được chọn
   if (!Array.isArray(appState.reportIncludedAccounts)) {
     appState.reportIncludedAccounts = [...accounts];
   }
