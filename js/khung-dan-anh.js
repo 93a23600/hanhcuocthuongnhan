@@ -17,14 +17,46 @@ window.onSelectGeminiModel = function(modelId) {
   }
 };
 
+window.syncCollapsedProgressBar = function() {
+  const readingBadge = document.getElementById("readingBadge");
+  const statusEl = document.getElementById("progressStatusText");
+  const percentEl = document.getElementById("progressPercentText");
+  const fillEl = document.getElementById("scanProgressBarFill");
+
+  const miniWrap = document.getElementById("collapsedProgressWrap");
+  const miniStatus = document.getElementById("collapsedProgressStatus");
+  const miniPercent = document.getElementById("collapsedProgressPercent");
+  const miniFill = document.getElementById("collapsedProgressFill");
+
+  if (!miniWrap || !readingBadge) return;
+
+  const isRunning = !readingBadge.classList.contains("hidden");
+  if (isRunning && appState.isUploadZoneCollapsed) {
+    miniWrap.classList.remove("hidden");
+    if (miniStatus && statusEl) miniStatus.textContent = statusEl.textContent;
+    if (miniPercent && percentEl) miniPercent.textContent = percentEl.textContent;
+    if (miniFill && fillEl) miniFill.style.width = fillEl.style.width || "0%";
+  } else {
+    miniWrap.classList.add("hidden");
+  }
+};
+
 window.toggleUploadZoneCollapse = function() {
   appState.isUploadZoneCollapsed = !appState.isUploadZoneCollapsed;
   localStorage.setItem("hktn_upload_collapsed", String(appState.isUploadZoneCollapsed));
 
+  const headerEl = document.getElementById("uploadZoneHeader");
   const bodyEl = document.getElementById("uploadZoneBody");
   const iconEl = document.getElementById("iconToggleUploadZone");
   const labelEl = document.getElementById("lblToggleUploadZone");
 
+  if (headerEl) {
+    if (appState.isUploadZoneCollapsed) {
+      headerEl.classList.remove("pb-3", "mb-4", "border-b", "border-slate-800/80");
+    } else {
+      headerEl.classList.add("pb-3", "mb-4", "border-b", "border-slate-800/80");
+    }
+  }
   if (bodyEl) {
     if (appState.isUploadZoneCollapsed) {
       bodyEl.classList.add("hidden");
@@ -38,8 +70,25 @@ window.toggleUploadZoneCollapse = function() {
   if (labelEl) {
     labelEl.textContent = appState.isUploadZoneCollapsed ? "Mở rộng khung" : "Thu gọn";
   }
+
+  window.syncCollapsedProgressBar();
   if (window.lucide) lucide.createIcons();
 };
+
+function setupCollapsedProgressObserver() {
+  const readingBadge = document.getElementById("readingBadge");
+  const statusEl = document.getElementById("progressStatusText");
+  const percentEl = document.getElementById("progressPercentText");
+  const fillEl = document.getElementById("scanProgressBarFill");
+  if (!readingBadge || readingBadge.dataset.observed) return;
+
+  readingBadge.dataset.observed = "true";
+  const observer = new MutationObserver(() => window.syncCollapsedProgressBar());
+  observer.observe(readingBadge, { attributes: true, attributeFilter: ["class"] });
+  if (statusEl) observer.observe(statusEl, { childList: true, characterData: true, subtree: true });
+  if (percentEl) observer.observe(percentEl, { childList: true, characterData: true, subtree: true });
+  if (fillEl) observer.observe(fillEl, { attributes: true, attributeFilter: ["style"] });
+}
 
 function renderUploadZoneHTML() {
   const isCollapsed = !!appState.isUploadZoneCollapsed;
@@ -49,11 +98,13 @@ function renderUploadZoneHTML() {
     `<option value="${m.id}" ${m.id === currentModel ? "selected" : ""}>${m.label}</option>`
   ).join("");
 
+  setTimeout(setupCollapsedProgressObserver, 0);
+
   return `
     <section class="bg-game-card border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl transition-all">
-      <!-- Thanh tiêu đề & Nút Thu gọn / Mở rộng -->
-      <div class="flex flex-wrap items-center justify-between gap-2 ${isCollapsed ? '' : 'pb-3 mb-4 border-b border-slate-800/80'}">
-        <div class="flex items-center gap-2 text-xs">
+      <!-- Thanh tiêu đề, Tiến trình thu gọn & Nút Thu gọn / Mở rộng -->
+      <div id="uploadZoneHeader" class="flex flex-wrap items-center justify-between gap-2 ${isCollapsed ? '' : 'pb-3 mb-4 border-b border-slate-800/80'}">
+        <div class="flex flex-wrap items-center gap-2 text-xs">
           <span class="font-bold text-white flex items-center gap-1.5">
             <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i>
             <span>Khu Vực Nạp Ảnh Rương</span>
@@ -62,7 +113,17 @@ function renderUploadZoneHTML() {
           <span class="hidden md:inline text-slate-400">Bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 font-mono text-[10px]">Ctrl+V</kbd> ở bất kỳ đâu để dán ảnh</span>
         </div>
 
-        <button type="button" onclick="toggleUploadZoneCollapse()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition">
+        <!-- Thanh tiến trình mini hiển thị khi đang thu gọn -->
+        <div id="collapsedProgressWrap" class="hidden flex-1 max-w-md mx-2 px-3 py-1 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2.5 text-xs">
+          <i data-lucide="loader-2" class="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0"></i>
+          <span id="collapsedProgressStatus" class="text-amber-200 font-semibold truncate">Đang xử lý...</span>
+          <div class="flex-1 min-w-[60px] bg-slate-900 rounded-full h-1.5 border border-slate-700/80 overflow-hidden">
+            <div id="collapsedProgressFill" class="bg-gradient-to-r from-emerald-500 to-amber-400 h-full transition-all duration-300 ease-out" style="width: 0%"></div>
+          </div>
+          <span id="collapsedProgressPercent" class="font-mono font-bold text-emerald-400 shrink-0">0%</span>
+        </div>
+
+        <button type="button" onclick="toggleUploadZoneCollapse()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition shrink-0">
           <i id="iconToggleUploadZone" data-lucide="${isCollapsed ? 'chevrons-down' : 'chevrons-up'}" class="w-3.5 h-3.5 text-amber-400"></i>
           <span id="lblToggleUploadZone">${isCollapsed ? 'Mở rộng khung' : 'Thu gọn'}</span>
         </button>
