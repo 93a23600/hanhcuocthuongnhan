@@ -25,10 +25,13 @@ function loadState() {
     try {
       const parsedBrain = JSON.parse(brainSaved);
       appState.learnedGridCrop = parsedBrain.learnedGridCrop || { top: 0, bottom: 0, left: 0, right: 0 };
+      appState.deletedKnownItems = parsedBrain.deletedKnownItems || [];
+      const deletedSet = new Set(appState.deletedKnownItems.map(s => s.trim().toLowerCase()));
       
       const rawIcons = parsedBrain.learnedIcons || {};
       const normalizedIcons = {};
       for (const [name, val] of Object.entries(rawIcons)) {
+        if (deletedSet.has(name.trim().toLowerCase())) continue;
         if (Array.isArray(val)) {
           normalizedIcons[name] = val;
         } else if (val && typeof val === "object" && (val.img || val.hash)) {
@@ -38,7 +41,9 @@ function loadState() {
       appState.learnedIcons = normalizedIcons;
 
       appState.trainedNumberErrors = parsedBrain.trainedNumberErrors || [];
-      appState.customKnownItems = parsedBrain.customKnownItems || [];
+      appState.customKnownItems = (parsedBrain.customKnownItems || []).filter(
+        name => !deletedSet.has(name.trim().toLowerCase())
+      );
       appState.noAdkAccounts = parsedBrain.noAdkAccounts || [];
       appState.reportIncludedAccounts = Array.isArray(parsedBrain.reportIncludedAccounts) ? parsedBrain.reportIncludedAccounts : null;
       appState.filterReportAccs = !!parsedBrain.filterReportAccs;
@@ -46,8 +51,11 @@ function loadState() {
       appState.hideEquipment = !!parsedBrain.hideEquipment;
       
       if (typeof KNOWN_ITEMS !== "undefined" && Array.isArray(KNOWN_ITEMS)) {
+        KNOWN_ITEMS = KNOWN_ITEMS.filter(name => !deletedSet.has(name.trim().toLowerCase()));
         appState.customKnownItems.forEach(name => {
-          if (!KNOWN_ITEMS.includes(name)) KNOWN_ITEMS.push(name);
+          if (!KNOWN_ITEMS.some(k => k.trim().toLowerCase() === name.trim().toLowerCase())) {
+            KNOWN_ITEMS.push(name);
+          }
         });
       }
     } catch (e) {
@@ -155,6 +163,7 @@ function saveBrainState() {
       learnedIcons: appState.learnedIcons,
       trainedNumberErrors: appState.trainedNumberErrors,
       customKnownItems: appState.customKnownItems,
+      deletedKnownItems: appState.deletedKnownItems || [],
       noAdkAccounts: appState.noAdkAccounts,
       reportIncludedAccounts: appState.reportIncludedAccounts,
       filterReportAccs: appState.filterReportAccs,
