@@ -4,16 +4,16 @@ function renderChestTabHTML() {
   return `
     <div id="tabGameGridView" class="space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl text-xs">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-slate-400 font-semibold">Tài khoản:</span>
           <select id="selectViewingAcc" class="bg-slate-950 border border-slate-700 px-2 py-1 rounded-lg text-emerald-400 font-bold focus:outline-none"></select>
-          <div class="flex gap-1" id="viewingChestBtns">
-            <button class="btn-view-chest px-2.5 py-1 rounded-lg border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold" data-title="Rương 1">Rương 1</button>
-            <button class="btn-view-chest px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold" data-title="Rương 2">Rương 2</button>
-            <button class="btn-view-chest px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-semibold" data-title="Rương 3">Rương 3</button>
-          </div>
+          <div class="flex flex-wrap items-center gap-1" id="viewingChestBtns"></div>
+          <button type="button" id="btnAddNewChest" onclick="promptAddNewChest()" title="Thêm rương mới & đặt tên cho tài khoản này" class="px-2.5 py-1 rounded-lg border border-dashed border-emerald-500/70 bg-emerald-950/30 hover:bg-emerald-900/60 text-emerald-300 font-bold flex items-center gap-1 transition">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Thêm Rương</span>
+          </button>
         </div>
-        <span class="text-slate-400 text-[11px] italic hidden sm:inline">Nhấp ô để sửa. Đổi tên 1 ô sẽ tự đổi toàn bộ các ô cùng icon.</span>
+        <span class="text-slate-400 text-[11px] italic hidden md:inline">Nhấp ô để sửa • Đổi tên 1 ô tự đồng bộ các ô trùng</span>
       </div>
 
       <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
