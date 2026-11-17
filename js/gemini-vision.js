@@ -17,7 +17,9 @@ Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô (nếu ô
   {"name": null, "qty": 0}
 ]`;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appState.apiKey}`, {
+  const selectedModel = appState.geminiModel || "gemini-2.5-flash";
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${appState.apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -30,7 +32,13 @@ Trả về đúng mảng JSON 35 phần tử tương ứng với 35 ô (nếu ô
       generationConfig: { responseMimeType: "application/json" }
     })
   });
-  if (!response.ok) throw new Error("Lỗi gọi Gemini Vision");
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const errMsg = errData?.error?.message || `HTTP ${response.status}`;
+    throw new Error(`Lỗi gọi model [${selectedModel}]: ${errMsg}`);
+  }
+
   const data = await response.json();
   return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
