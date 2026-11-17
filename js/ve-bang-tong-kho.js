@@ -186,8 +186,8 @@ function renderSummaryTable() {
             <button type="button"
               onclick="jumpToAccountChest('${safeAcc}', '${safeChest}', ${loc.firstSlotIdx})"
               title="Mở ngay ${loc.account} - ${loc.chestTitle} (Ô ${loc.firstSlotIdx + 1})"
-              class="${badgeStyle} inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] mr-1.5 mb-1 border cursor-pointer transition shadow-sm">
-              <span>${loc.shortLabel}</span>
+              class="${badgeStyle} inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-mono border cursor-pointer transition shadow-sm whitespace-nowrap">
+              ${loc.shortLabel}
             </button>
           `;
         }).join("");
@@ -204,9 +204,9 @@ function renderSummaryTable() {
           : "";
 
         tr.innerHTML = `
-          <td class="py-2 px-3 text-center">${iconImg}</td>
-          <td class="py-3 px-4 font-semibold text-white">
-            <div class="flex items-center flex-wrap gap-1 group">
+          <td class="py-2 px-2.5 text-center">${iconImg}</td>
+          <td class="py-2.5 px-3 font-semibold text-white whitespace-nowrap">
+            <div class="flex items-center gap-1 group">
               <span onclick="inlineRenameReportItem('${safeName}')" title="Nhấp để đổi tên vật phẩm này" class="cursor-pointer hover:text-emerald-300 hover:underline transition">${item.name}</span>
               <button type="button" onclick="inlineRenameReportItem('${safeName}')" title="Đổi tên vật phẩm" class="opacity-60 group-hover:opacity-100 p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition">
                 <i data-lucide="pencil" class="w-3 h-3"></i>
@@ -214,12 +214,16 @@ function renderSummaryTable() {
               ${equipBadge}${ignoredBadge}
             </div>
           </td>
-          <td class="py-3 px-4 text-center whitespace-nowrap">
-            <span class="inline-block bg-slate-900 border border-slate-800 px-3 py-1 rounded-md text-slate-200 font-mono font-bold whitespace-nowrap">${item.stacks} ô</span>
+          <td class="py-2.5 px-2.5 text-center whitespace-nowrap">
+            <span class="inline-block bg-slate-900 border border-slate-800 px-2.5 py-0.5 rounded-md text-slate-200 font-mono font-bold whitespace-nowrap">${item.stacks} ô</span>
           </td>
-          <td class="py-3 px-4 text-center">${pills}</td>
-          <td class="py-3 px-4 text-right font-mono font-bold text-amber-400 text-sm whitespace-nowrap">${item.totalQty.toLocaleString('vi-VN')}</td>
-          <td class="py-3 px-4 text-center whitespace-nowrap">
+          <td class="py-2.5 px-3 text-left">
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1.5">
+              ${pills}
+            </div>
+          </td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-400 text-sm whitespace-nowrap">${item.totalQty.toLocaleString('vi-VN')}</td>
+          <td class="py-2.5 px-2.5 text-center whitespace-nowrap">
             <button onclick="toggleIgnoreItem('${safeName}')" title="${item.isIgnored ? 'Hiện lại trong Tổng Hợp Toàn Kho' : 'Bỏ qua (ẩn khỏi Tổng Hợp Toàn Kho)'}" class="p-1.5 rounded-lg transition ${item.isIgnored ? 'bg-amber-950/60 text-amber-400 hover:bg-amber-900' : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white'}">
               <i data-lucide="${item.isIgnored ? 'eye' : 'eye-off'}" class="w-3.5 h-3.5"></i>
             </button>
