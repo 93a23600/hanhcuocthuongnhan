@@ -1,17 +1,22 @@
 /* MODULE: NẠP & LƯU TRỮ LOCALSTORAGE (js/luu-tai-du-lieu.js) */
 
-function compressSlotCropDataUrl(dataUrl, size = 52, quality = 0.72) {
+function compressSlotCropDataUrl(dataUrl, maxSide = null, quality = 0.92) {
   return new Promise((resolve) => {
     if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image")) {
       return resolve(dataUrl || null);
     }
     const img = new Image();
     img.onload = () => {
+      // Giữ nguyên kích thước thật 1:1 của ô cắt (không ép nhỏ về 52x52 gây mờ/vỡ chữ)
+      const targetW = maxSide ? Math.min(img.naturalWidth || maxSide, maxSide) : (img.naturalWidth || 64);
+      const targetH = maxSide ? Math.min(img.naturalHeight || maxSide, maxSide) : (img.naturalHeight || 64);
+
       const cvs = document.createElement("canvas");
-      cvs.width = size;
-      cvs.height = size;
+      cvs.width = Math.max(1, targetW);
+      cvs.height = Math.max(1, targetH);
       const ctx = cvs.getContext("2d");
-      ctx.drawImage(img, 0, 0, size, size);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
       resolve(cvs.toDataURL("image/webp", quality));
     };
     img.onerror = () => resolve(dataUrl);
@@ -100,7 +105,6 @@ async function saveChestsState() {
     if (!Array.isArray(c.slots)) return;
     c.slots.forEach((s, idx) => {
       if (!s) return;
-      // Nếu ô chưa có ảnh mới nạp (isNewUpload !== true) mà bị mất cropImg -> phục hồi lại ảnh cũ đang khóa
       if (!s.cropImg && !c._isNewImageUpload && prevSlots[idx]?.cropImg) {
         s.cropImg = prevSlots[idx].cropImg;
       }
@@ -119,28 +123,28 @@ async function saveChestsState() {
   try {
     localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(buildPayload(appState.chests)));
   } catch (err) {
-    console.warn("Đang tối ưu dung lượng WebP cho từng ảnh ô để khóa cứng toàn bộ ảnh gốc...", err);
+    console.warn("Đang chuyển sang WebP nét cao giữ nguyên kích thước 1:1 để tiết kiệm bộ nhớ...", err);
     try {
-      // Nén nhẹ từng cropImg riêng biệt (52x52 WebP), tuyệt đối không xóa cropImg
+      // Mức 1: Giữ nguyên kích thước thật 1:1 (maxSide = null), chất lượng 0.92 sắc nét
       for (const c of (appState.chests || [])) {
         if (!Array.isArray(c.slots)) continue;
         for (let i = 0; i < c.slots.length; i++) {
           const s = c.slots[i];
           if (s && s.cropImg) {
-            s.cropImg = await compressSlotCropDataUrl(s.cropImg, 52, 0.72);
+            s.cropImg = await compressSlotCropDataUrl(s.cropImg, null, 0.92);
           }
         }
       }
       localStorage.setItem(STORAGE_CHESTS_KEY, JSON.stringify(buildPayload(appState.chests)));
     } catch (e) {
       try {
-        // Mức nén sâu hơn (44x44 WebP) vẫn giữ nguyên 100% ảnh gốc của từng ô
+        // Mức 2: Vẫn giữ kích thước thật 1:1 (maxSide = null), chất lượng 0.80
         for (const c of (appState.chests || [])) {
           if (!Array.isArray(c.slots)) continue;
           for (let i = 0; i < c.slots.length; i++) {
             const s = c.slots[i];
             if (s && s.cropImg) {
-              s.cropImg = await compressSlotCropDataUrl(s.cropImg, 44, 0.62);
+              s.cropImg = await compressSlotCropDataUrl(s.cropImg, null, 0.80);
             }
           }
         }
