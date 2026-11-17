@@ -120,13 +120,13 @@
           </div>
           <div>
             <label class="text-slate-300 font-bold block mb-1">2. Chọn Rương Cần Nạp:</label>
-            <div class="grid grid-cols-4 gap-2">
-              <button type="button" class="btn-chest-num py-2 rounded-xl border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold" data-num="Rương 1">Rương 1</button>
-              <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold" data-num="Rương 2">Rương 2</button>
-              <button type="button" class="btn-chest-num py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold" data-num="Rương 3">Rương 3</button>
-              <button type="button" id="btnCustomChestNum" class="py-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 font-semibold">+ Khác</button>
+            <div id="uploadChestButtonsGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <button type="button" class="btn-chest-num py-2 px-2 rounded-xl border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold truncate" data-num="Rương 1">Rương 1</button>
+              <button type="button" class="btn-chest-num py-2 px-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold truncate" data-num="Rương 2">Rương 2</button>
+              <button type="button" class="btn-chest-num py-2 px-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold truncate" data-num="Rương 3">Rương 3</button>
+              <button type="button" id="btnCustomChestNum" class="py-2 px-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 font-semibold">+ Khác</button>
             </div>
-            <input type="text" id="customChestInput" placeholder="Nhập tên rương khác..." class="hidden mt-2 w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+            <input type="text" id="customChestInput" placeholder="Nhập tên rương mới..." class="hidden mt-2 w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-emerald-300 font-semibold focus:outline-none focus:border-emerald-500">
           </div>
         </div>
         <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
