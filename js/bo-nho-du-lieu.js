@@ -7,6 +7,7 @@ let appState = {
   apiKey: localStorage.getItem("gemini_api_key") || "",
   geminiModel: localStorage.getItem("gemini_selected_model") || "gemini-2.5-flash",
   isUploadZoneCollapsed: localStorage.getItem("hktn_upload_collapsed") === "true",
+  showSlotQtyOverlay: localStorage.getItem("hktn_show_slot_qty") !== "false",
   accounts: [],
   chests: [],
   learnedGridCrop: { top: 0, bottom: 0, left: 0, right: 0 },
