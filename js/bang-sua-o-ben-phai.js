@@ -14,9 +14,8 @@ function updateSidePanelInfo(slotIdx, slotData) {
   if (dropdown) dropdown.classList.add("hidden");
 
   if (img && emptyTxt) {
-    const learnedArr = slotData?.name ? appState.learnedIcons?.[slotData.name] : null;
-    const latestImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[learnedArr.length - 1].img : (learnedArr?.img || "");
-    const displayImg = slotData?.cropImg || latestImg;
+    // Luôn ưu tiên ảnh cắt thực tế của chính ô đang chọn
+    const displayImg = slotData?.cropImg || "";
 
     if (displayImg) {
       img.src = displayImg;
@@ -30,11 +29,20 @@ function updateSidePanelInfo(slotIdx, slotData) {
   }
 
   if (nameInput) nameInput.value = slotData?.name || "";
-  if (qtyInput) qtyInput.value = slotData?.qty || 0;
+
+  // Tách biệt hoàn toàn việc đọc số lượng khỏi tên vật phẩm:
+  // Nếu qty đang là 0 nhưng AI từng đọc được số gốc (aiOriginalQty > 0) thì lấy ngay số AI đã đọc
+  const currentQty = parseInt(slotData?.qty) || 0;
+  const originalAiQty = slotData?.aiOriginalQty !== undefined ? (parseInt(slotData.aiOriginalQty) || 0) : 0;
+  const resolvedQty = currentQty > 0 ? currentQty : originalAiQty;
+
+  if (qtyInput) qtyInput.value = resolvedQty;
 
   if (notice) {
-    if (slotData?.aiOriginalQty && slotData.aiOriginalQty !== slotData.qty) {
-      notice.textContent = `(AI từng đọc: ${slotData.aiOriginalQty})`;
+    if (slotData?.aiOriginalQty !== undefined && originalAiQty !== resolvedQty) {
+      notice.textContent = `(AI từng đọc: ${originalAiQty})`;
+    } else if (originalAiQty > 0) {
+      notice.textContent = `(AI gốc: ${originalAiQty})`;
     } else {
       notice.textContent = "";
     }
