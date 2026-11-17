@@ -7,6 +7,82 @@ const ITEM_GROUP_COLORS = [
   "#d946ef", "#fb7185", "#34d399", "#60a5fa"
 ];
 
+window.selectViewingChestTab = function(title) {
+  appState.viewingChest = title;
+  appState.selectedSlotIndex = 0;
+  renderGameGridChest();
+};
+
+window.promptAddNewChest = function() {
+  const acc = appState.viewingAcc;
+  if (!acc) {
+    alert("Hãy chọn hoặc nạp ít nhất 1 tài khoản trước khi thêm rương!");
+    return;
+  }
+
+  const existingChests = (appState.chests || []).filter(c => c.account === acc);
+  const defaultTitle = `Rương ${existingChests.length + 1}`;
+  const inputTitle = prompt(`Nhập tên rương mới cho tài khoản [${acc}]:`, defaultTitle);
+  if (!inputTitle || !inputTitle.trim()) return;
+
+  const cleanTitle = inputTitle.trim();
+  const isDuplicate = existingChests.some(c => c.title.trim().toLowerCase() === cleanTitle.toLowerCase());
+  if (isDuplicate) {
+    appState.viewingChest = cleanTitle;
+    renderGameGridChest();
+    showToast(`Rương [${cleanTitle}] đã tồn tại, đã chuyển sang rương này!`, "info");
+    return;
+  }
+
+  const emptySlots = Array.from({ length: 35 }, () => ({ name: null, qty: 0, cropImg: null }));
+  appState.chests.push({
+    account: acc,
+    title: cleanTitle,
+    slots: emptySlots
+  });
+
+  const chestSelect = document.getElementById("selectChestTitle");
+  if (chestSelect && !Array.from(chestSelect.options).some(o => o.value === cleanTitle)) {
+    const opt = document.createElement("option");
+    opt.value = cleanTitle;
+    opt.textContent = cleanTitle;
+    chestSelect.appendChild(opt);
+  }
+
+  appState.viewingChest = cleanTitle;
+  appState.selectedSlotIndex = 0;
+  saveChestsState();
+  showToast(`Đã tạo [${cleanTitle}] cho tài khoản [${acc}]!`, "success");
+};
+
+function renderChestSelectorButtons() {
+  const btnContainer = document.getElementById("viewingChestBtns");
+  if (!btnContainer) return;
+
+  const baseTitles = ["Rương 1", "Rương 2", "Rương 3"];
+  const accChests = (appState.chests || []).filter(c => c.account === appState.viewingAcc);
+  const allTitles = [...baseTitles];
+
+  accChests.forEach(c => {
+    if (c.title && !allTitles.some(t => t.toLowerCase() === c.title.trim().toLowerCase())) {
+      allTitles.push(c.title.trim());
+    }
+  });
+
+  if (appState.viewingChest && !allTitles.some(t => t.toLowerCase() === appState.viewingChest.trim().toLowerCase())) {
+    allTitles.push(appState.viewingChest.trim());
+  }
+
+  btnContainer.innerHTML = allTitles.map(title => {
+    const isActive = (appState.viewingChest || "").trim().toLowerCase() === title.toLowerCase();
+    const safeTitle = title.replace(/'/g, "\\'");
+    const cls = isActive
+      ? "btn-view-chest px-2.5 py-1 rounded-lg border border-emerald-500 bg-emerald-950/50 text-emerald-300 font-bold transition"
+      : "btn-view-chest px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition";
+    return `<button type="button" onclick="selectViewingChestTab('${safeTitle}')" class="${cls}">${title}</button>`;
+  }).join("");
+}
+
 function renderGameGridChest() {
   const selectAcc = document.getElementById("selectViewingAcc");
   if (selectAcc && appState.accounts && appState.accounts.length > 0) {
@@ -14,7 +90,11 @@ function renderGameGridChest() {
     selectAcc.innerHTML = appState.accounts.map(acc => `<option value="${acc}" ${acc === appState.viewingAcc ? 'selected' : ''}>${acc}</option>`).join("");
   }
 
-  const chest = (appState.chests || []).find(c => c.account === appState.viewingAcc && c.title === appState.viewingChest);
+  renderChestSelectorButtons();
+
+  const chest = (appState.chests || []).find(
+    c => c.account === appState.viewingAcc && (c.title || "").trim().toLowerCase() === (appState.viewingChest || "").trim().toLowerCase()
+  );
   const container = document.getElementById("gameGridSlotsContainer");
   const countLabel = document.getElementById("currentChestSlotCount");
   const currentChestLabel = document.getElementById("currentChestLabel");
@@ -50,7 +130,7 @@ function renderGameGridChest() {
 
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    cell.className = `game-slot-cell relative ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
+    cell.className = `game-slot-cell relative overflow-hidden ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
     cell.title = hasItem ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `Ô ${i + 1} (Trống)`;
 
     if (hasItem) {
@@ -79,11 +159,15 @@ function renderGameGridChest() {
         `;
       }
 
+      const visualHtml = displayImg
+        ? `<img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit]">`
+        : `<div class="w-full h-full flex items-center justify-center p-1 text-center text-[9px] font-semibold text-slate-300 leading-tight bg-slate-900/90">${slot.name}</div>`;
+
       cell.innerHTML = `
         ${dotHtml}
         ${linkIconHtml}
-        <img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit]">
-        <span class="absolute bottom-0.5 right-1 text-[11px] font-mono font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)]">x${slot.qty}</span>
+        ${visualHtml}
+        <span class="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-950/85 text-[11px] font-mono font-black text-amber-300 leading-none py-0.5 shadow">x${slot.qty}</span>
       `;
     }
 
