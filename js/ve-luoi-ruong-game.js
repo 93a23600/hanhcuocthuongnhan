@@ -7,6 +7,12 @@ const ITEM_GROUP_COLORS = [
   "#d946ef", "#fb7185", "#34d399", "#60a5fa"
 ];
 
+window.toggleSlotQtyOverlay = function(isChecked) {
+  appState.showSlotQtyOverlay = !!isChecked;
+  localStorage.setItem("hktn_show_slot_qty", String(appState.showSlotQtyOverlay));
+  renderGameGridChest();
+};
+
 window.selectViewingChestTab = function(title) {
   appState.viewingChest = title;
   appState.selectedSlotIndex = 0;
@@ -40,14 +46,6 @@ window.promptAddNewChest = function() {
     title: cleanTitle,
     slots: emptySlots
   });
-
-  const chestSelect = document.getElementById("selectChestTitle");
-  if (chestSelect && !Array.from(chestSelect.options).some(o => o.value === cleanTitle)) {
-    const opt = document.createElement("option");
-    opt.value = cleanTitle;
-    opt.textContent = cleanTitle;
-    chestSelect.appendChild(opt);
-  }
 
   appState.viewingChest = cleanTitle;
   appState.selectedSlotIndex = 0;
@@ -105,6 +103,7 @@ function renderGameGridChest() {
 
   if (!container) return;
 
+  const showQtyOverlay = appState.showSlotQtyOverlay !== false;
   const chestColorMap = new Map();
   let colorIdx = 0;
   const slots = (chest && chest.slots) ? chest.slots : [];
@@ -163,11 +162,15 @@ function renderGameGridChest() {
         ? `<img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit]">`
         : `<div class="w-full h-full flex items-center justify-center p-1 text-center text-[9px] font-semibold text-slate-300 leading-tight bg-slate-900/90">${slot.name}</div>`;
 
+      const qtyBadgeHtml = showQtyOverlay
+        ? `<span class="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-950/85 text-[11px] font-mono font-black text-amber-300 leading-none py-0.5 shadow pointer-events-none">x${slot.qty}</span>`
+        : "";
+
       cell.innerHTML = `
         ${dotHtml}
         ${linkIconHtml}
         ${visualHtml}
-        <span class="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-950/85 text-[11px] font-mono font-black text-amber-300 leading-none py-0.5 shadow">x${slot.qty}</span>
+        ${qtyBadgeHtml}
       `;
     }
 
