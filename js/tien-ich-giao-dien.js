@@ -37,6 +37,40 @@ function updateApiKeyUI() {
   }
 }
 
+window.syncUploadModalChestOptions = function(targetAcc) {
+  const chestSelect = document.getElementById("selectChestTitle");
+  if (!chestSelect) return;
+
+  const cleanAcc = (targetAcc || "").trim().toLowerCase();
+  const baseTitles = ["Rương 1", "Rương 2", "Rương 3"];
+  const allTitles = [...baseTitles];
+
+  // Lấy tất cả rương riêng của tài khoản đang nhập (bao gồm rương thêm mới & rương đổi tên)
+  (appState.chests || []).forEach(c => {
+    const cAcc = (c.account || "").trim().toLowerCase();
+    const cTitle = (c.title || "").trim();
+    if (!cTitle) return;
+    if ((!cleanAcc || cAcc === cleanAcc) && !allTitles.some(t => t.toLowerCase() === cTitle.toLowerCase())) {
+      allTitles.push(cTitle);
+    }
+  });
+
+  // Nếu đang đứng xem rương nào bên tab Rương thì đảm bảo có luôn trong danh sách
+  if (appState.viewingChest && !allTitles.some(t => t.toLowerCase() === appState.viewingChest.trim().toLowerCase())) {
+    allTitles.push(appState.viewingChest.trim());
+  }
+
+  const prevSelected = chestSelect.value;
+  chestSelect.innerHTML = allTitles.map(t => `<option value="${t}">${t}</option>`).join("");
+
+  // Ưu tiên chọn đúng rương đang mở xem nếu cùng tài khoản, hoặc giữ lại lựa chọn trước đó
+  if (cleanAcc && appState.viewingAcc && appState.viewingAcc.trim().toLowerCase() === cleanAcc && appState.viewingChest) {
+    chestSelect.value = appState.viewingChest;
+  } else if (prevSelected && allTitles.includes(prevSelected)) {
+    chestSelect.value = prevSelected;
+  }
+};
+
 function openUploadModal() {
   const dl = document.getElementById("accountSuggestions");
   if (dl && appState.accounts) {
@@ -44,8 +78,15 @@ function openUploadModal() {
   }
   
   const accInput = document.getElementById("inputAccountName");
-  if (accInput && !accInput.value.trim() && appState.accounts && appState.accounts.length > 0) {
-    accInput.value = appState.accounts[appState.accounts.length - 1];
+  if (accInput) {
+    if (appState.viewingAcc) {
+      accInput.value = appState.viewingAcc;
+    } else if (!accInput.value.trim() && appState.accounts && appState.accounts.length > 0) {
+      accInput.value = appState.accounts[appState.accounts.length - 1];
+    }
+
+    accInput.oninput = () => window.syncUploadModalChestOptions(accInput.value);
+    window.syncUploadModalChestOptions(accInput.value);
   }
 
   const modal = document.getElementById("confirmUploadModal");
