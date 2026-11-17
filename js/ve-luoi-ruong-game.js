@@ -124,15 +124,19 @@ function renderGameGridChest() {
 
   for (let i = 0; i < 35; i++) {
     const slot = slots[i] || null;
-    const hasItem = slot && slot.name;
+    const hasItem = !!(slot && slot.name);
+    const hasCropImage = !!(slot && slot.cropImg);
     if (hasItem) filledCount++;
 
     const isSelected = (i === appState.selectedSlotIndex);
     const cell = document.createElement("div");
-    cell.className = `game-slot-cell relative overflow-hidden ${hasItem ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
+    cell.className = `game-slot-cell relative ${(hasItem || hasCropImage) ? 'has-item' : 'is-empty'} ${isSelected ? 'ring-2 ring-white z-10' : ''}`;
     cell.title = hasItem
       ? (slot.qty > 1 ? `[Ô ${i + 1}] ${slot.name} (x${slot.qty})` : `[Ô ${i + 1}] ${slot.name}`)
-      : `Ô ${i + 1} (Trống)`;
+      : (hasCropImage ? `Ô ${i + 1} (Chưa đặt tên - Nhấn để đặt tên)` : `Ô ${i + 1} (Trống)`);
+
+    // 1. LUÔN DÙNG DUY NHẤT ẢNH CẮT RIÊNG CỦA CHÍNH Ô ĐÓ (slot.cropImg), TUYỆT ĐỐI KHÔNG LẤY ẢNH KHÁC ĐÈ LÊN
+    const displayImg = hasCropImage ? slot.cropImg : "";
 
     if (hasItem) {
       const normName = slot.name.trim().toLowerCase();
@@ -143,10 +147,6 @@ function renderGameGridChest() {
       const hasLinkRight = (nextName === normName);
 
       if (!isSelected) cell.style.borderColor = groupColor;
-
-      const learnedArr = appState.learnedIcons?.[slot.name];
-      const latestImg = Array.isArray(learnedArr) && learnedArr.length > 0 ? learnedArr[learnedArr.length - 1].img : (learnedArr?.img || "");
-      const displayImg = slot.cropImg || latestImg;
 
       const dotHtml = `<div class="absolute top-1 left-1 w-2 h-2 rounded-full pointer-events-none border border-slate-950 z-10" style="background:${groupColor}; box-shadow: 0 0 4px ${groupColor};"></div>`;
 
@@ -176,6 +176,13 @@ function renderGameGridChest() {
         ${linkIconHtml}
         ${visualHtml}
         ${qtyBadgeHtml}
+      `;
+    } else if (hasCropImage) {
+      // Ô đã bị xóa tên nhưng vẫn giữ nguyên ảnh gốc cắt riêng của ô đó để click vào đặt tên lại
+      if (!isSelected) cell.style.borderColor = "#f59e0b";
+      cell.innerHTML = `
+        <img src="${displayImg}" class="w-full h-full object-cover rounded-[inherit] opacity-80">
+        <span class="absolute bottom-0.5 left-0.5 right-0.5 text-center rounded bg-amber-950/90 text-[9px] font-bold text-amber-300 leading-none py-0.5 pointer-events-none">Chưa tên</span>
       `;
     }
 
