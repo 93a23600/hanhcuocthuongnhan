@@ -38,11 +38,21 @@ window.updateSidePanelInfo = function(slotIdx, slotData) {
   }
 
   if (nameInp) nameInp.value = slotData.name || "";
-  if (qtyInp) qtyInp.value = slotData.qty || 0;
+
+  // Tách biệt số lượng khỏi tên vật phẩm: luôn hiển thị đúng số AI đã đọc kể cả ô chưa đặt tên
+  const currentQty = parseInt(slotData.qty) || 0;
+  const origAiQty = slotData.aiOriginalQty !== undefined ? (parseInt(slotData.aiOriginalQty) || 0) : 0;
+  const displayQty = currentQty > 0 ? currentQty : origAiQty;
+
+  if (qtyInp) qtyInp.value = displayQty;
   if (aiNotice) {
-    aiNotice.textContent = (slotData.aiOriginalQty !== undefined && slotData.aiOriginalQty !== slotData.qty)
-      ? `(AI gốc: ${slotData.aiOriginalQty})`
-      : "";
+    if (slotData.aiOriginalQty !== undefined && origAiQty !== displayQty) {
+      aiNotice.textContent = `(AI gốc: ${origAiQty})`;
+    } else if (origAiQty > 0) {
+      aiNotice.textContent = `(AI gốc: ${origAiQty})`;
+    } else {
+      aiNotice.textContent = "";
+    }
   }
 };
 
@@ -75,16 +85,17 @@ function initSlotEditorAndTrainingEvents() {
       const nameInp = document.getElementById("sidePanelItemName");
       const qtyInput = document.getElementById("sidePanelItemQty");
 
-      const newName = nameInp ? nameInp.value.trim() : null;
+      const newName = nameInp ? (nameInp.value.trim() || null) : null;
       const newQty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
 
       if (!chest.slots) chest.slots = Array(35).fill(null);
       const targetSlot = chest.slots[idx] || {};
 
+      // Lưu độc lập số lượng (newQty) và tên vật phẩm (newName), không xóa số lượng khi chưa có tên
       chest.slots[idx] = {
         ...targetSlot,
         name: newName,
-        qty: newName ? newQty : 0,
+        qty: newQty,
         cropImg: targetSlot.cropImg || null,
         aiOriginalQty: targetSlot.aiOriginalQty !== undefined ? targetSlot.aiOriginalQty : newQty
       };
@@ -123,6 +134,10 @@ function initSlotEditorAndTrainingEvents() {
             );
             if (matched) {
               other.name = newName;
+              // Đảm bảo các ô đồng bộ cũng giữ đúng số lượng AI từng đọc
+              if ((!other.qty || other.qty === 0) && other.aiOriginalQty > 0) {
+                other.qty = other.aiOriginalQty;
+              }
               count++;
             }
           }
@@ -149,7 +164,12 @@ function initSlotEditorAndTrainingEvents() {
       const slot = chest.slots ? chest.slots[idx] : null;
       if (!slot) return;
 
-      const wrongQty = parseInt(slot.qty) || 0;
+      const qtyInput = document.getElementById("sidePanelItemQty");
+      const currentInputVal = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
+      const wrongQty = (parseInt(slot.qty) || 0) > 0
+        ? (parseInt(slot.qty) || 0)
+        : (slot.aiOriginalQty !== undefined ? (parseInt(slot.aiOriginalQty) || 0) : currentInputVal);
+
       const itemName = (slot.name || "").trim();
       const correctInput = prompt(
         `AI đang đọc ô này là [${wrongQty}]${itemName ? ` (${itemName})` : ""}. Nhập số CHÍNH XÁC trong game để AI học & sửa ngay toàn bộ ô bị sai tương tự:`,
@@ -162,7 +182,6 @@ function initSlotEditorAndTrainingEvents() {
         slot.qty = correctVal;
 
         if (!appState.trainedNumberErrors) appState.trainedNumberErrors = [];
-        // Cập nhật hoặc thêm mới quy tắc dạy số (không trùng lặp quy tắc cũ)
         const existingIdx = appState.trainedNumberErrors.findIndex(
           r => Number(r.wrongQty) === wrongQty && (r.itemName || "").trim().toLowerCase() === itemName.toLowerCase()
         );
@@ -189,14 +208,14 @@ function initSlotEditorAndTrainingEvents() {
           for (let sIdx = 0; sIdx < c.slots.length; sIdx++) {
             if (c === chest && sIdx === idx) continue;
             const other = c.slots[sIdx];
-            if (!other || !other.name) continue;
+            if (!other || (!other.name && !other.cropImg)) continue;
 
             const otherQty = parseInt(other.qty) || 0;
             const otherOrigQty = other.aiOriginalQty !== undefined ? parseInt(other.aiOriginalQty) : otherQty;
             const isSameWrongNum = (otherQty === wrongQty || otherOrigQty === wrongQty);
             if (!isSameWrongNum) continue;
 
-            const isSameItemName = itemName && other.name.trim().toLowerCase() === itemName.toLowerCase();
+            const isSameItemName = itemName && other.name && other.name.trim().toLowerCase() === itemName.toLowerCase();
             let isSimilarCrop = false;
             if (targetCropHash && other.cropImg && typeof computeImageHash === "function" && typeof getHammingDistance === "function") {
               const otherHash = await computeImageHash(other.cropImg);
