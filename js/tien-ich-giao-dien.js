@@ -22,10 +22,12 @@ function updateApiKeyUI() {
   const apiKeyLabel = document.getElementById("apiKeyLabel");
   if (!modeBadge || !modeDesc || !apiKeyLabel) return;
 
+  const activeModel = appState.geminiModel || "gemini-2.5-flash";
+
   if (appState.apiKey) {
     modeBadge.className = "badge-emerald text-xs px-2 py-0.5 rounded-full font-semibold";
     modeBadge.textContent = "Gemini AI Online";
-    modeDesc.textContent = "Đã kết nối API. Khi dán ảnh và xác nhận, AI sẽ quét tự động.";
+    modeDesc.textContent = `Đã kết nối API (${activeModel}). Dán ảnh và xác nhận để AI quét tự động.`;
     apiKeyLabel.textContent = "API: Sẵn Sàng";
   } else {
     modeBadge.className = "badge-amber text-xs px-2 py-0.5 rounded-full font-semibold";
