@@ -161,7 +161,7 @@ function renderGameGridChest() {
       }
 
       const visualHtml = displayImg
-        ? `<img src="${displayImg}" class="w-full h-full object-contain bg-slate-950 rounded-[inherit]">`
+        ? `<img src="${displayImg}" class="w-full h-full object-fill bg-slate-950 rounded-[inherit]">`
         : `<div class="w-full h-full flex items-center justify-center p-1 text-center text-[9px] font-semibold text-slate-300 leading-tight bg-slate-900/90">${slot.name}</div>`;
 
       const isSingleEquip = (appState.equipmentItems || []).some(e => e.trim().toLowerCase() === normName);
@@ -181,7 +181,7 @@ function renderGameGridChest() {
       // Ô đã bị xóa tên nhưng vẫn giữ nguyên ảnh gốc cắt riêng của ô đó để click vào đặt tên lại
       if (!isSelected) cell.style.borderColor = "#f59e0b";
       cell.innerHTML = `
-        <img src="${displayImg}" class="w-full h-full object-contain bg-slate-950 rounded-[inherit] opacity-85">
+        <img src="${displayImg}" class="w-full h-full object-fill bg-slate-950 rounded-[inherit] opacity-85">
         <span class="absolute bottom-0.5 left-0.5 right-0.5 text-center rounded bg-amber-950/90 text-[9px] font-bold text-amber-300 leading-none py-0.5 pointer-events-none">Chưa tên</span>
       `;
     }
