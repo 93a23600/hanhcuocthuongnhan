@@ -23,7 +23,7 @@ function renderChestTabHTML() {
       </div>
 
       <div class="flex flex-row items-start justify-center gap-3 overflow-x-auto pb-2">
-        <div class="w-[300px] sm:w-[340px] shrink-0">
+        <div class="w-[360px] sm:w-[415px] shrink-0">
           <div class="game-chest-window p-2.5 rounded-xl border-2 border-[#1e2e3d] shadow-2xl bg-[#0c131a]">
             <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#1f2d3a] px-1 text-xs">
               <span id="currentChestLabel" class="font-bold text-amber-400 tracking-wide text-[11px] sm:text-xs">Rương Chứa Đồ</span>
@@ -43,8 +43,8 @@ function renderChestTabHTML() {
           </div>
 
           <div class="flex items-center gap-2.5 p-2 bg-slate-950 rounded-lg border border-slate-800">
-            <div class="w-12 h-12 bg-[#0a0f14] border border-slate-700 rounded-md flex items-center justify-center overflow-hidden shrink-0">
-              <img id="sidePanelCropImg" src="" class="w-full h-full object-contain hidden">
+            <div class="w-[60px] h-[50px] bg-[#0a0f14] border border-slate-700 rounded-md flex items-center justify-center overflow-hidden shrink-0">
+              <img id="sidePanelCropImg" src="" class="w-full h-full object-fill hidden">
               <span id="sidePanelEmptyIcon" class="text-slate-600 text-[10px] italic">Trống</span>
             </div>
             <div class="text-[11px] text-slate-400 leading-tight">
