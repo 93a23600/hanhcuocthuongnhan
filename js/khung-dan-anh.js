@@ -28,10 +28,26 @@ window.syncCollapsedProgressBar = function() {
   const miniPercent = document.getElementById("collapsedProgressPercent");
   const miniFill = document.getElementById("collapsedProgressFill");
 
-  if (!miniWrap || !readingBadge) return;
+  if (!miniWrap) return;
 
+  // Ưu tiên lấy dữ liệu từ bộ điều phối đa luồng nếu có
+  if (typeof window.getQueueProgressSummary === "function") {
+    const qInfo = window.getQueueProgressSummary();
+    if (qInfo && qInfo.activeCount > 0) {
+      miniWrap.classList.remove("hidden");
+      if (miniStatus) miniStatus.textContent = qInfo.shortText;
+      if (miniPercent) miniPercent.textContent = `${qInfo.percent}%`;
+      if (miniFill) miniFill.style.width = `${qInfo.percent}%`;
+      return;
+    } else {
+      miniWrap.classList.add("hidden");
+      return;
+    }
+  }
+
+  if (!readingBadge) return;
   const isRunning = !readingBadge.classList.contains("hidden");
-  if (isRunning && appState.isUploadZoneCollapsed) {
+  if (isRunning) {
     miniWrap.classList.remove("hidden");
     if (miniStatus && statusEl) miniStatus.textContent = statusEl.textContent;
     if (miniPercent && percentEl) miniPercent.textContent = percentEl.textContent;
@@ -102,28 +118,26 @@ function renderUploadZoneHTML() {
 
   return `
     <section class="bg-game-card border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl transition-all">
-      <!-- Thanh tiêu đề, Tiến trình thu gọn & Nút Thu gọn / Mở rộng -->
-      <div id="uploadZoneHeader" class="flex flex-wrap items-center justify-between gap-2 ${isCollapsed ? '' : 'pb-3 mb-4 border-b border-slate-800/80'}">
-        <div class="flex flex-wrap items-center gap-2 text-xs">
-          <span class="font-bold text-white flex items-center gap-1.5">
-            <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i>
+      <!-- Thanh tiêu đề 1 hàng duy nhất: Tiêu đề + Tiến trình gọn + Nút Thu gọn / Mở rộng -->
+      <div id="uploadZoneHeader" class="flex items-center justify-between gap-2 min-w-0 ${isCollapsed ? '' : 'pb-3 mb-4 border-b border-slate-800/80'}">
+        <div class="flex items-center gap-2 text-xs shrink-0">
+          <span class="font-bold text-white flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400 shrink-0"></i>
             <span>Khu Vực Nạp Ảnh Rương</span>
           </span>
-          <span class="hidden md:inline text-slate-500">•</span>
-          <span class="hidden md:inline text-slate-400">Bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 font-mono text-[10px]">Ctrl+V</kbd> ở bất kỳ đâu để dán ảnh</span>
         </div>
 
-        <!-- Thanh tiến trình mini hiển thị khi đang thu gọn -->
-        <div id="collapsedProgressWrap" class="hidden flex-1 max-w-md mx-2 px-3 py-1 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2.5 text-xs">
-          <i data-lucide="loader-2" class="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0"></i>
+        <!-- Thanh tiến trình mini gọn nằm cùng hàng ngang, không đẩy rớt dòng -->
+        <div id="collapsedProgressWrap" class="hidden flex-1 min-w-0 max-w-xs sm:max-w-sm mx-1 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-[11px]">
+          <i data-lucide="loader-2" class="w-3 h-3 text-amber-400 animate-spin shrink-0"></i>
           <span id="collapsedProgressStatus" class="text-amber-200 font-semibold truncate">Đang xử lý...</span>
-          <div class="flex-1 min-w-[60px] bg-slate-900 rounded-full h-1.5 border border-slate-700/80 overflow-hidden">
+          <div class="w-12 sm:w-20 shrink-0 bg-slate-900 rounded-full h-1.5 border border-slate-700/80 overflow-hidden">
             <div id="collapsedProgressFill" class="bg-gradient-to-r from-emerald-500 to-amber-400 h-full transition-all duration-300 ease-out" style="width: 0%"></div>
           </div>
           <span id="collapsedProgressPercent" class="font-mono font-bold text-emerald-400 shrink-0">0%</span>
         </div>
 
-        <button type="button" onclick="toggleUploadZoneCollapse()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition shrink-0">
+        <button type="button" onclick="toggleUploadZoneCollapse()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition shrink-0 whitespace-nowrap">
           <i id="iconToggleUploadZone" data-lucide="${isCollapsed ? 'chevrons-down' : 'chevrons-up'}" class="w-3.5 h-3.5 text-amber-400"></i>
           <span id="lblToggleUploadZone">${isCollapsed ? 'Mở rộng khung' : 'Thu gọn'}</span>
         </button>
@@ -137,7 +151,7 @@ function renderUploadZoneHTML() {
             <i data-lucide="image-plus" class="w-7 h-7"></i>
           </div>
           <h3 class="font-semibold text-white text-base">
-            Click vào đây rồi bấm <kbd class="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-mono font-bold">Ctrl + V</kbd> dán ảnh rương (hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>)
+            Dán ảnh rương hoặc <button type="button" id="btnBrowseFile" class="text-emerald-400 underline hover:text-emerald-300 font-bold cursor-pointer">chọn tệp</button>
           </h3>
           <p class="text-xs text-slate-400 mt-1 max-w-md">Canvas sẽ căn chỉnh 35 ô (5×7), crop icon sắc nét và tạo giao diện rương chuẩn game.</p>
           <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
