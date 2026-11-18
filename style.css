@@ -21,16 +21,24 @@
   color: #34d399;
 }
 
-/* Ô Rương Game chuẩn 5x6 */
+/* Ô Rương Game chuẩn 5x7 theo tỷ lệ thực tế của icon game (6:5) */
 .game-slot-cell {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 6 / 5;
   background-color: #121922;
   border: 1px solid #1f2b38;
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.game-slot-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .game-slot-cell:hover {
