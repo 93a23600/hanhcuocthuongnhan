@@ -26,12 +26,11 @@ function getAllExistingAccounts() {
   return Array.from(accMap.values());
 }
 
-// Khởi tạo & hiển thị Dropdown chọn Tài khoản đầy đủ (khắc phục lỗi datalist tự ẩn Acc khác)
+// Khởi tạo & hiển thị Dropdown chọn Tài khoản đầy đủ
 window.setupAccountPickerDropdown = function() {
   const accInput = document.getElementById("inputAccountName");
   if (!accInput) return;
 
-  // Tắt datalist mặc định của trình duyệt để không bị tự lọc theo chữ đang có
   accInput.removeAttribute("list");
   accInput.setAttribute("autocomplete", "off");
 
@@ -108,11 +107,9 @@ window.setupAccountPickerDropdown = function() {
     dropdown.classList.remove("hidden");
   };
 
-  // Mở full danh sách ngay khi bấm vào ô hoặc focus
   accInput.onfocus = () => renderAccountOptions();
   accInput.onclick = () => renderAccountOptions();
 
-  // Cập nhật danh sách rương khi người dùng tự gõ tên
   accInput.oninput = () => {
     window.renderUploadChestChoiceButtons(accInput.value);
     if (!dropdown.classList.contains("hidden")) {
@@ -120,7 +117,6 @@ window.setupAccountPickerDropdown = function() {
     }
   };
 
-  // Đóng dropdown khi bấm ra ngoài
   if (!window._accDropdownOutsideBound) {
     window._accDropdownOutsideBound = true;
     document.addEventListener("mousedown", (e) => {
@@ -195,23 +191,7 @@ window.renderUploadChestChoiceButtons = function(targetAcc) {
 };
 
 function initUploadAndCalibrateEvents() {
-  // 1. Phím Ctrl + V dán ảnh toàn trang
-  window.addEventListener("paste", (e) => {
-    const items = (e.clipboardData || window.clipboardData)?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const file = items[i].getAsFile();
-        if (file) {
-          e.preventDefault();
-          handleIncomingFile(file);
-          break;
-        }
-      }
-    }
-  });
-
-  // 2. Chọn tệp & Vùng Kéo thả
+  // 1. Khóa dán toàn trang: chỉ nhận Ctrl + V khi bấm trực tiếp vào khung dán ảnh (#dropZone)
   const fileInput = document.getElementById("fileInput");
   const btnBrowse = document.getElementById("btnBrowseFile");
   const dropZone = document.getElementById("dropZone");
@@ -233,6 +213,21 @@ function initUploadAndCalibrateEvents() {
 
   if (dropZone) {
     dropZone.addEventListener("click", () => dropZone.focus());
+    dropZone.addEventListener("paste", (e) => {
+      const items = (e.clipboardData || window.clipboardData)?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleIncomingFile(file);
+            break;
+          }
+        }
+      }
+    });
     dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add("drop-active"); };
     dropZone.ondragleave = () => dropZone.classList.remove("drop-active");
     dropZone.ondrop = (e) => {
@@ -244,7 +239,7 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // 3. Thanh trượt căn chỉnh 4 cạnh khung lưới 35 ô
+  // 2. Thanh trượt căn chỉnh 4 cạnh khung lưới 35 ô
   ["Top", "Bottom", "Left", "Right"].forEach(side => {
     const range = document.getElementById(`rangeCrop${side}`);
     if (range) {
@@ -290,7 +285,7 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // Xác nhận khung -> Train độ lệch (nếu có), cắt 35 ô riêng biệt sắc nét & mở Popup chọn Acc/Rương
+  // Xác nhận khung -> Cắt 35 ô riêng biệt & mở Popup chọn Acc/Rương
   const btnConfirmCalib = document.getElementById("btnConfirmCalibrate");
   if (btnConfirmCalib) {
     btnConfirmCalib.onclick = () => {
@@ -301,12 +296,10 @@ function initUploadAndCalibrateEvents() {
         appState.learnedGridCrop = Object.assign({}, currentCropRatios);
         saveBrainState();
 
-        // 1. Train AI nếu người dùng vừa sửa lại khung bị lệch
         if (typeof window.trainAiGridCorrection === "function") {
           window.trainAiGridCorrection(pendingRawImg, currentCropRatios);
         }
 
-        // 2. Tạo gói 35 ô sắc nét riêng biệt + bản ảnh lưới đã khóa chuẩn truyền cho AI sau
         if (typeof window.buildVerifiedGridPayload === "function") {
           const verifiedPayload = window.buildVerifiedGridPayload(pendingRawImg, currentCropRatios);
           pendingCrops = verifiedPayload.crops35;
@@ -336,6 +329,9 @@ function initUploadAndCalibrateEvents() {
           };
         }
 
+        // Giải phóng ảnh thô ngay sau khi đã cắt xong 35 ô để sẵn sàng nhận ảnh tiếp theo
+        pendingRawImg = null;
+
         const previewImg = document.getElementById("uploadPreviewImg");
         if (previewImg && pendingImage) previewImg.src = pendingImage.dataUrl;
 
@@ -348,15 +344,15 @@ function initUploadAndCalibrateEvents() {
           accInp.value = appState.viewingAcc || (allAccs.length > 0 ? allAccs[0] : "");
         }
         window.renderUploadChestChoiceButtons(accInp ? accInp.value : appState.viewingAcc);
-        showToast("Đã khóa khung 35 ô chuẩn & truyền dữ liệu sang AI!", "success");
       }
     };
   }
 
-  // 4. Khởi tạo Dropdown Acc & Nút chọn Rương
+  // 3. Khởi tạo Dropdown Acc & Nút chọn Rương
   window.setupAccountPickerDropdown();
   window.renderUploadChestChoiceButtons(appState.viewingAcc);
 
+  // 4. Bấm "Cập Nhật Rương" -> Đẩy ngay vào hàng đợi đa luồng & mở khóa nạp rương tiếp theo liền
   const btnConfirm = document.getElementById("btnConfirmUpload");
   if (btnConfirm) {
     btnConfirm.onclick = () => {
@@ -376,7 +372,26 @@ function initUploadAndCalibrateEvents() {
 
       const modal = document.getElementById("confirmUploadModal");
       if (modal) modal.classList.add("hidden");
-      executeUpload(accName, chestTitle);
+
+      // Đóng gói snapshot dữ liệu của rương này trước khi giải phóng biến toàn cục
+      const taskSnapshot = {
+        account: accName,
+        title: chestTitle,
+        image: pendingImage ? Object.assign({}, pendingImage) : null,
+        crops: Array.isArray(pendingCrops) ? [...pendingCrops] : []
+      };
+
+      // Reset ngay biến tạm để người dùng nạp & căn chỉnh ảnh rương tiếp theo mà không phải chờ
+      pendingImage = null;
+      pendingCrops = [];
+
+      if (typeof window.enqueueChestUploadTask === "function") {
+        window.enqueueChestUploadTask(taskSnapshot);
+      } else {
+        pendingImage = taskSnapshot.image;
+        pendingCrops = taskSnapshot.crops;
+        executeUpload(accName, chestTitle);
+      }
     };
   }
 
