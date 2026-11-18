@@ -119,10 +119,12 @@
           </div>
         </div>
         <div class="space-y-3 text-xs">
-          <div>
+          <div class="relative">
             <label class="text-slate-300 font-bold block mb-1">1. Tên Tài Khoản (Acc):</label>
-            <input type="text" id="inputAccountName" list="accountSuggestions" placeholder="Gõ tên acc bất kỳ..." class="w-full bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold">
-            <datalist id="accountSuggestions"></datalist>
+            <div class="relative">
+              <input type="text" id="inputAccountName" autocomplete="off" placeholder="Chọn tài khoản hoặc gõ tên mới..." class="w-full bg-slate-950 border border-slate-700 pl-3 pr-8 py-2 rounded-xl text-emerald-300 focus:outline-none focus:border-emerald-500 font-semibold">
+              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-[10px]">&#9660;</span>
+            </div>
           </div>
           <div>
             <label class="text-slate-300 font-bold block mb-1">2. Chọn Rương Cần Nạp:</label>
