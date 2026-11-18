@@ -5,7 +5,7 @@ const uploadTaskQueue = [];
 const activeScanTasks = new Map();
 let taskAutoId = 1;
 
-// Tính toán trạng thái tổng hợp của tất cả luồng đang chạy để hiển thị lên UI
+// Tổng hợp tiến trình của các luồng đang chạy để hiển thị lên giao diện
 window.getQueueProgressSummary = function() {
   const runningList = Array.from(activeScanTasks.values());
   const activeCount = runningList.length;
@@ -16,7 +16,6 @@ window.getQueueProgressSummary = function() {
     return { activeCount: 0, waitingCount: 0, percent: 0, text: "", shortText: "" };
   }
 
-  // Tính % trung bình của các luồng đang chạy (luồng đang chờ tính 0%)
   const sumPercent = runningList.reduce((acc, t) => acc + (t.percent || 0), 0);
   const avgPercent = Math.min(100, Math.max(1, Math.round(sumPercent / totalInFlight)));
 
@@ -40,7 +39,7 @@ window.getQueueProgressSummary = function() {
   };
 };
 
-// Cập nhật thanh tiến trình cả ở chế độ mở rộng lẫn chế độ thu gọn
+// Đồng bộ thanh tiến trình ở cả khung mở rộng lẫn thanh tiêu đề thu gọn
 window.refreshMultiThreadProgressUI = function() {
   const badge = document.getElementById("readingBadge");
   const barContainer = document.getElementById("scanProgressBarContainer");
@@ -70,7 +69,7 @@ window.refreshMultiThreadProgressUI = function() {
   }
 };
 
-// Đẩy 1 rương mới vào hàng đợi và kích hoạt luồng xử lý ngay lập tức
+// Đẩy 1 rương vào hàng đợi & mở khóa cho phép nạp tiếp rương khác ngay
 window.enqueueChestUploadTask = function(snapshot) {
   if (!snapshot || !snapshot.image) return;
 
@@ -92,8 +91,8 @@ window.enqueueChestUploadTask = function(snapshot) {
     const inFlight = activeScanTasks.size + uploadTaskQueue.length;
     showToast(
       inFlight > 1
-        ? `Đã thêm [${task.account} - ${task.title}] vào luồng (${inFlight} rương đang chạy ngầm)...`
-        : `Đang quét ngầm [${task.account} - ${task.title}], bạn có thể nạp tiếp rương khác ngay!`,
+        ? `Đã thêm [${task.account} - ${task.title}] vào luồng (${inFlight} rương đang chạy)...`
+        : `Đang quét ngầm [${task.account} - ${task.title}], có thể nạp tiếp rương khác ngay!`,
       "info"
     );
   }
@@ -101,7 +100,6 @@ window.enqueueChestUploadTask = function(snapshot) {
   pumpUploadQueue();
 };
 
-// Bộ điều phối lấy tác vụ từ hàng đợi đẩy vào các luồng rảnh
 function pumpUploadQueue() {
   while (activeScanTasks.size < MAX_CONCURRENT_SCANS && uploadTaskQueue.length > 0) {
     const nextTask = uploadTaskQueue.shift();
@@ -111,7 +109,7 @@ function pumpUploadQueue() {
   window.refreshMultiThreadProgressUI();
 }
 
-// Luồng xử lý độc lập cho từng rương (băm nhỏ tiến trình mượt 0% -> 100%)
+// Worker chạy độc lập từng rương với tiến trình băm nhỏ mượt 0% -> 100%
 async function runSingleChestWorker(task) {
   const updateTaskProgress = (pct, fullMsg, shortMsg) => {
     task.percent = Math.min(100, Math.max(0, Math.round(pct)));
@@ -122,11 +120,10 @@ async function runSingleChestWorker(task) {
 
   updateTaskProgress(4, "Đang gửi ảnh lên Gemini AI...", "Gửi ảnh AI...");
 
-  // Băm nhỏ tiến trình theo đường cong giảm tốc mượt mà từ 4% -> 86% (không bị khựng ở 65%)
+  // Đường cong tiệm cận mượt từ 4% -> 86% trong lúc chờ Gemini trả kết quả (không khựng ở 65%)
   const startTime = Date.now();
   const smoothTimer = setInterval(() => {
     const elapsedSec = (Date.now() - startTime) / 1000;
-    // Công thức tiệm cận mượt tới 86%: 4 + 82 * (1 - e^(-t / 4.2))
     const smoothPct = Math.min(86, Math.round(4 + 82 * (1 - Math.exp(-elapsedSec / 4.2))));
 
     if (smoothPct > task.percent && task.percent < 86) {
@@ -140,7 +137,7 @@ async function runSingleChestWorker(task) {
         shortMsg = "Đọc vật phẩm...";
       } else if (smoothPct >= 16) {
         msg = "AI đang quét 35 ô rương...";
-        shortMsg = "Đang quét 35 ô...";
+        shortMsg = "Quét 35 ô...";
       }
       updateTaskProgress(smoothPct, msg, shortMsg);
     }
@@ -168,7 +165,7 @@ async function runSingleChestWorker(task) {
 
     const finalSlots = [];
     for (let i = 0; i < 35; i++) {
-      // Băm nhỏ tiếp đoạn 87% -> 98% theo từng ô (1/35 -> 35/35)
+      // Băm nhỏ đoạn 87% -> 98% theo từng nhịp kiểm tra 35 ô
       if (i % 3 === 0 || i === 34) {
         const slotPct = 87 + Math.round(((i + 1) / 35) * 11);
         updateTaskProgress(slotPct, `Khớp icon ô ${i + 1}/35...`, `Ô ${i + 1}/35...`);
@@ -214,7 +211,7 @@ async function runSingleChestWorker(task) {
       });
     }
 
-    updateTaskProgress(99, "Đang lưu rương...", "Đang lưu...");
+    updateTaskProgress(99, "Đang lưu dữ liệu rương...", "Đang lưu...");
 
     if (!appState.accounts.includes(task.account)) {
       appState.accounts.push(task.account);
@@ -249,7 +246,6 @@ async function runSingleChestWorker(task) {
       showToast(`Lỗi nạp [${task.account} - ${task.title}]: ${err.message}`, "error");
     }
   } finally {
-    // Giữ nhịp 100% trong 350ms cho người dùng thấy rõ hoàn tất rồi dọn luồng
     setTimeout(() => {
       activeScanTasks.delete(task.id);
       window.refreshMultiThreadProgressUI();
