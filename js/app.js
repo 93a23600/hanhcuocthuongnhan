@@ -1,7 +1,7 @@
 /* FILE KHỞI ĐỘNG TỔNG (js/app.js) */
 
-window.addEventListener("DOMContentLoaded", () => {
-  loadState();
+window.addEventListener("DOMContentLoaded", async () => {
+  await loadState();
   updateApiKeyUI();
 
   if (typeof initUploadAndCalibrateEvents === "function") initUploadAndCalibrateEvents();
