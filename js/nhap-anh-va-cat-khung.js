@@ -191,7 +191,29 @@ window.renderUploadChestChoiceButtons = function(targetAcc) {
 };
 
 function initUploadAndCalibrateEvents() {
-  // 1. Khóa dán toàn trang: chỉ nhận Ctrl + V khi bấm trực tiếp vào khung dán ảnh (#dropZone)
+  // 1. Phím Ctrl + V dán ảnh mọi lúc trên toàn trang (kể cả khi đang thu gọn khung)
+  if (!window._globalPasteChestBound) {
+    window._globalPasteChestBound = true;
+    window.addEventListener("paste", (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : "";
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      const items = (e.clipboardData || window.clipboardData)?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleIncomingFile(file);
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Chọn tệp & Vùng Kéo thả
   const fileInput = document.getElementById("fileInput");
   const btnBrowse = document.getElementById("btnBrowseFile");
   const dropZone = document.getElementById("dropZone");
@@ -213,21 +235,6 @@ function initUploadAndCalibrateEvents() {
 
   if (dropZone) {
     dropZone.addEventListener("click", () => dropZone.focus());
-    dropZone.addEventListener("paste", (e) => {
-      const items = (e.clipboardData || window.clipboardData)?.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            e.preventDefault();
-            e.stopPropagation();
-            handleIncomingFile(file);
-            break;
-          }
-        }
-      }
-    });
     dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add("drop-active"); };
     dropZone.ondragleave = () => dropZone.classList.remove("drop-active");
     dropZone.ondrop = (e) => {
@@ -239,7 +246,7 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // 2. Thanh trượt căn chỉnh 4 cạnh khung lưới 35 ô
+  // 3. Thanh trượt căn chỉnh 4 cạnh khung lưới 35 ô
   ["Top", "Bottom", "Left", "Right"].forEach(side => {
     const range = document.getElementById(`rangeCrop${side}`);
     if (range) {
@@ -269,12 +276,15 @@ function initUploadAndCalibrateEvents() {
   }
 
   // Nút AI Tự Căn Khung
-  document.addEventListener("click", (e) => {
-    const btnAi = e.target.closest("#btnAiAutoCalibrate");
-    if (btnAi && typeof window.runAiAutoCalibrateGrid === "function") {
-      window.runAiAutoCalibrateGrid();
-    }
-  });
+  if (!window._aiAutoCalibClickBound) {
+    window._aiAutoCalibClickBound = true;
+    document.addEventListener("click", (e) => {
+      const btnAi = e.target.closest("#btnAiAutoCalibrate");
+      if (btnAi && typeof window.runAiAutoCalibrateGrid === "function") {
+        window.runAiAutoCalibrateGrid();
+      }
+    });
+  }
 
   const btnCancelCalib = document.getElementById("btnCancelCalibrate");
   if (btnCancelCalib) {
@@ -348,11 +358,11 @@ function initUploadAndCalibrateEvents() {
     };
   }
 
-  // 3. Khởi tạo Dropdown Acc & Nút chọn Rương
+  // 4. Khởi tạo Dropdown Acc & Nút chọn Rương
   window.setupAccountPickerDropdown();
   window.renderUploadChestChoiceButtons(appState.viewingAcc);
 
-  // 4. Bấm "Cập Nhật Rương" -> Đẩy ngay vào hàng đợi đa luồng & mở khóa nạp rương tiếp theo liền
+  // 5. Bấm "Cập Nhật Rương" -> Đẩy ngay vào hàng đợi đa luồng & mở khóa nạp rương tiếp theo liền
   const btnConfirm = document.getElementById("btnConfirmUpload");
   if (btnConfirm) {
     btnConfirm.onclick = () => {
@@ -373,7 +383,6 @@ function initUploadAndCalibrateEvents() {
       const modal = document.getElementById("confirmUploadModal");
       if (modal) modal.classList.add("hidden");
 
-      // Đóng gói snapshot dữ liệu của rương này trước khi giải phóng biến toàn cục
       const taskSnapshot = {
         account: accName,
         title: chestTitle,
@@ -381,7 +390,6 @@ function initUploadAndCalibrateEvents() {
         crops: Array.isArray(pendingCrops) ? [...pendingCrops] : []
       };
 
-      // Reset ngay biến tạm để người dùng nạp & căn chỉnh ảnh rương tiếp theo mà không phải chờ
       pendingImage = null;
       pendingCrops = [];
 
