@@ -39,8 +39,3 @@ window.getQueueProgressSummary = function() {
     shortText: `Đang xử lý ${totalInFlight} rương`
   };
 };
-```[cite: 7]
-
-### Lưu ý thêm khi chạy
-* **Kiểm tra `js/luong-quet-mot-ruong.js`:** Khi bấm **Cập Nhật Rương**, `pumpUploadQueue()` sẽ lấy tác vụ đẩy vào `activeScanTasks` rồi gọi `runSingleChestWorker(nextTask)`[cite: 5, 7]. Nếu file `js/luong-quet-mot-ruong.js` chưa có hàm `runSingleChestWorker` hoặc bị lỗi cú pháp, tác vụ sẽ nằm trong `activeScanTasks` nhưng không quét tiếp được[cite: 7].
-* **Cảnh báo `reload.js` và `favicon.ico`:** Hai dòng này không ảnh hưởng đến luồng quét AI (một cái là extension trình duyệt, một cái là thiếu icon tab)[cite: 5].
