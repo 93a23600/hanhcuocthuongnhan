@@ -1,6 +1,15 @@
 /* MODULE 2: CHỌN RƯƠNG ĐÍCH KHI NẠP ẢNH (js/chon-ruong-nap-anh.js) */
 
-let selectedChestNum = "Rương 1";
+window.selectedChestNum = window.selectedChestNum || "Rương 1";
+
+function syncCustomChestInput() {
+  const input = document.getElementById("customChestInput");
+  if (!input) return;
+  const val = (input.value || "").trim();
+  if (val) {
+    window.selectedChestNum = val;
+  }
+}
 
 window.renderUploadChestChoiceButtons = function(targetAcc) {
   const grid = document.getElementById("uploadChestButtonsGrid");
@@ -23,14 +32,23 @@ window.renderUploadChestChoiceButtons = function(targetAcc) {
     allTitles.push(appState.viewingChest.trim());
   }
 
-  if (cleanAcc && appState.viewingAcc && appState.viewingAcc.trim().toLowerCase() === cleanAcc && appState.viewingChest) {
-    selectedChestNum = appState.viewingChest.trim();
-  } else if (!allTitles.some(t => t.toLowerCase() === (selectedChestNum || "").toLowerCase())) {
-    selectedChestNum = allTitles[0];
+  const customInput = document.getElementById("customChestInput");
+  const customVal = customInput && !customInput.classList.contains("hidden")
+    ? (customInput.value || "").trim()
+    : "";
+
+  if (customVal) {
+    window.selectedChestNum = customVal;
+  } else if (!window.selectedChestNum) {
+    if (cleanAcc && appState.viewingAcc && appState.viewingAcc.trim().toLowerCase() === cleanAcc && appState.viewingChest) {
+      window.selectedChestNum = appState.viewingChest.trim();
+    } else {
+      window.selectedChestNum = allTitles[0] || "Rương 1";
+    }
   }
 
   const btnsHtml = allTitles.map(title => {
-    const isActive = (selectedChestNum || "").toLowerCase() === title.toLowerCase();
+    const isActive = !customVal && (window.selectedChestNum || "").toLowerCase() === title.toLowerCase();
     const cls = isActive
       ? "btn-chest-num py-2 px-2 rounded-xl border border-emerald-500 bg-emerald-950/40 text-emerald-400 font-bold truncate"
       : "btn-chest-num py-2 px-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold truncate";
@@ -40,27 +58,42 @@ window.renderUploadChestChoiceButtons = function(targetAcc) {
   grid.innerHTML = `${btnsHtml}<button type="button" id="btnCustomChestNum" class="py-2 px-2 rounded-xl border border-dashed border-slate-600 bg-slate-950 text-slate-400 font-semibold">+ Khác</button>`;
 
   grid.querySelectorAll(".btn-chest-num").forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.preventDefault();
       grid.querySelectorAll(".btn-chest-num").forEach(b => {
         b.classList.remove("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
         b.classList.add("bg-slate-800", "text-slate-300");
       });
       btn.classList.add("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
       btn.classList.remove("bg-slate-800", "text-slate-300");
-      selectedChestNum = btn.dataset.num;
-      const customInput = document.getElementById("customChestInput");
-      if (customInput) customInput.classList.add("hidden");
+
+      window.selectedChestNum = (btn.dataset.num || "Rương 1").trim();
+      if (customInput) {
+        customInput.value = "";
+        customInput.classList.add("hidden");
+      }
     };
   });
 
   const btnCustomChest = document.getElementById("btnCustomChestNum");
   if (btnCustomChest) {
-    btnCustomChest.onclick = () => {
-      const input = document.getElementById("customChestInput");
-      if (input) {
-        input.classList.remove("hidden");
-        input.focus();
+    btnCustomChest.onclick = (e) => {
+      e.preventDefault();
+      grid.querySelectorAll(".btn-chest-num").forEach(b => {
+        b.classList.remove("border-emerald-500", "text-emerald-400", "bg-emerald-950/40");
+        b.classList.add("bg-slate-800", "text-slate-300");
+      });
+      if (customInput) {
+        customInput.classList.remove("hidden");
+        customInput.focus();
+        syncCustomChestInput();
       }
     };
+  }
+
+  if (customInput && !customInput.dataset.boundChestSync) {
+    customInput.dataset.boundChestSync = "1";
+    customInput.addEventListener("input", syncCustomChestInput);
+    customInput.addEventListener("change", syncCustomChestInput);
   }
 };
